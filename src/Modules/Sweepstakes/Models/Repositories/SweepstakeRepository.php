@@ -41,17 +41,74 @@ final class SweepstakeRepository
         return $row === false ? null : $row;
     }
 
-    /** @return list<array<string,mixed>> */
+    /**
+     * Concours ouverts, avec de quoi les qualifier sur l'accueil.
+     *
+     * Le badge (nouveau, populaire, bientot fini) est **derive des donnees**
+     * et non saisi : un champ « mis en avant » se remplit une fois puis ne se
+     * met plus jamais a jour, et finit par mentir.
+     *
+     * @return list<array<string,mixed>>
+     */
     public function listPublished(): array
     {
-        return $this->connection()->fetchAllAssociative(
-            'SELECT * FROM t_sweepstake
-              WHERE sweepstake_status = :status
-                AND (sweepstake_date_start IS NULL OR sweepstake_date_start <= CURDATE())
-                AND (sweepstake_date_end IS NULL OR sweepstake_date_end >= CURDATE())
-              ORDER BY sweepstake_prize_value_usd DESC, sweepstake_name ASC',
+        $rows = $this->connection()->fetchAllAssociative(
+            'SELECT s.*,
+                    (SELECT COUNT(*) FROM t_lead l
+                      WHERE l.lead_id_sweepstake = s.sweepstake_id
+                        AND l.lead_status = "complete"
+                        AND l.created_at >= (NOW() - INTERVAL 7 DAY)) AS entries_7d,
+                    DATEDIFF(s.sweepstake_date_end, CURDATE()) AS days_left,
+                    DATEDIFF(CURDATE(), DATE(s.created_at))    AS days_online
+               FROM t_sweepstake s
+              WHERE s.sweepstake_status = :status
+                AND (s.sweepstake_date_start IS NULL OR s.sweepstake_date_start <= CURDATE())
+                AND (s.sweepstake_date_end IS NULL OR s.sweepstake_date_end >= CURDATE())
+              ORDER BY s.sweepstake_prize_value_usd DESC, s.sweepstake_name ASC',
             ['status' => 'published']
         );
+
+        $busiest = 0;
+        foreach ($rows as $row) {
+            $busiest = max($busiest, (int) $row['entries_7d']);
+        }
+
+        foreach ($rows as $i => $row) {
+            $rows[$i]['badge'] = $this->badgeFor($row, $busiest);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Un badge, ou aucun.
+     *
+     * L'urgence passe avant la nouveaute : un concours qui se termine dans
+     * trois jours merite plus l'attention qu'un concours ouvert hier. Et on
+     * n'annonce « bientot fini » qu'a sept jours ou moins — « 87 jours
+     * restants » invite a revenir plus tard, c'est-a-dire a ne pas participer.
+     *
+     * @param array<string,mixed> $row
+     */
+    private function badgeFor(array $row, int $busiest): ?string
+    {
+        $daysLeft = $row['days_left'];
+        if ($daysLeft !== null && (int) $daysLeft >= 0 && (int) $daysLeft <= 7) {
+            return 'ending';
+        }
+
+        // « Populaire » n'a de sens que compare aux autres, et seulement s'il y
+        // a de quoi comparer : sur cinq participations, le premier n'est pas
+        // populaire, il est juste premier.
+        if ($busiest >= 20 && (int) $row['entries_7d'] >= $busiest) {
+            return 'popular';
+        }
+
+        if ($row['days_online'] !== null && (int) $row['days_online'] <= 14) {
+            return 'new';
+        }
+
+        return null;
     }
 
     /**

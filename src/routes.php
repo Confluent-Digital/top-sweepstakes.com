@@ -91,6 +91,9 @@ $app->map(['GET', 'POST'], '/unsubscribe', ComplianceController::class . ':unsub
 $app->map(['GET', 'POST'], '/do-not-sell', ComplianceController::class . ':doNotSell');
 
 // ---------------------------------------------------------------- Pages legales
+// Le fragment precede la page complete : sans quoi `/legal/privacy` serait
+// capte par la route de concours `/{slug}`.
+$app->get('/legal-fragment/{page:privacy|terms|legal|partners|cookies}', LegalController::class . ':fragment');
 $app->get('/{page:privacy|terms|legal|partners|cookies}', LegalController::class . ':show');
 
 // ---------------------------------------------------------------- Accueil

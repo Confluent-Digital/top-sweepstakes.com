@@ -48,9 +48,9 @@
         {% if sweepstake is defined and sweepstake %}
             <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a>
         {% endif %}
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/terms">Terms of Service</a>
-        <a href="/partners">Marketing Partners</a>
+        <a href="/privacy" data-legal="privacy">Privacy Policy</a>
+        <a href="/terms" data-legal="terms">Terms of Service</a>
+        <a href="/partners" data-legal="partners">Marketing Partners</a>
         {# Exigé par le CCPA/CPRA : le lien doit être visible sur chaque page. #}
         <a href="/do-not-sell">Do Not Sell or Share My Personal Information</a>
         <a href="/unsubscribe">Unsubscribe</a>
@@ -78,6 +78,25 @@
 
     <p>&copy; {{ "now"|date("Y") }} {{ site.site_name|default(app_name) }}. All rights reserved.</p>
 </footer>
+{#
+    Popin des mentions légales. Le <dialog> est vide au chargement : son contenu
+    est récupéré à l'ouverture, ce qui évite d'ajouter 65 Ko à chaque page pour
+    un document que la plupart des visiteurs n'ouvriront pas.
+
+    Les liens du pied de page restent de vrais liens : sans JavaScript, ils
+    naviguent vers la page. La popin n'est qu'une amélioration.
+#}
+<dialog id="legal-modal" class="legal-modal" aria-labelledby="legal-modal-title">
+    <div class="legal-modal-head">
+        <h2 id="legal-modal-title" data-legal-title></h2>
+        <button type="button" class="legal-modal-close" data-legal-close aria-label="Close">&times;</button>
+    </div>
+    <div class="legal-modal-body" data-legal-body></div>
+    <div class="legal-modal-foot">
+        <button type="button" class="btn btn-outline" data-legal-close>Close</button>
+    </div>
+</dialog>
+<script src="/dist/js/legal-modal.js" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

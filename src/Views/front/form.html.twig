@@ -132,6 +132,14 @@
             </div>
             <input type="hidden" name="{{ timestamp_field }}" value="{{ form_opened_at }}">
 
+            {#
+                Passé à 1 par la popin quand le participant ouvre la liste des
+                destinataires. Ce n'est pas un consentement : ne pas l'avoir
+                ouverte n'invalide rien. C'est une circonstance, comme l'IP —
+                et la seule qu'on ne puisse pas reconstituer après coup.
+            #}
+            <input type="hidden" name="partners_viewed" value="0">
+
             <button type="submit" class="btn btn-primary btn-lg btn-block">
                 {% if step < total_steps %}Continue{% else %}Complete my entry{% endif %}
             </button>

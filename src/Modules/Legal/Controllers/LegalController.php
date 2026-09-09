@@ -27,6 +27,33 @@ final class LegalController
     ) {
     }
 
+    /**
+     * Fragment seul, sans gabarit : c'est ce que charge la popin.
+     *
+     * La page complete (`show`) reste servie a la meme adresse sans ce suffixe.
+     * Les deux sont necessaires : la popin evite de faire quitter le tunnel a
+     * un participant en cours de saisie, et la page reste le repli quand le
+     * JavaScript ne s'execute pas. Une mention legale inaccessible parce qu'un
+     * script a echoue serait une non-conformite.
+     *
+     * @param array<string,string> $args
+     */
+    public function fragment(Request $request, Response $response, array $args): Response
+    {
+        $page = (string) $args['page'];
+        $content = $this->legal->fragment($page);
+
+        if ($content === null) {
+            throw new HttpNotFoundException($request);
+        }
+
+        $response->getBody()->write($content);
+
+        return $response
+            ->withHeader('Content-Type', 'text/html; charset=utf-8')
+            ->withHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+
     /** @param array<string,string> $args */
     public function show(Request $request, Response $response, array $args): Response
     {

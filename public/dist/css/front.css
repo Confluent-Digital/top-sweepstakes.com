@@ -555,3 +555,188 @@ p { margin: 0 0 var(--s4); }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ------------------------------------------------------------------ popin légale */
+
+/*
+ * Ouvrir un document légal ne doit pas faire quitter le tunnel : un participant
+ * en cours de saisie qui clique sur « Privacy Policy » perdrait son élan.
+ * Le <dialog> natif porte déjà la gestion du focus et la fermeture au clavier.
+ */
+.legal-modal {
+    width: min(46rem, 94vw);
+    max-height: 88vh;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-lift);
+}
+.legal-modal::backdrop { background: rgba(16, 19, 26, .55); }
+
+.legal-modal-head {
+    position: sticky; top: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+    padding: var(--s4);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--line);
+}
+.legal-modal-head h2 { margin: 0; font-size: 1.0625rem; }
+
+.legal-modal-close {
+    flex: 0 0 auto;
+    width: 2.5rem; height: 2.5rem;
+    border: 0; border-radius: var(--radius-sm);
+    background: transparent; color: var(--ink-soft);
+    font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.legal-modal-close:hover { background: var(--line-soft); color: var(--ink); }
+
+/* Le document défile dans la popin, pas la page derrière. */
+.legal-modal-body {
+    overflow-y: auto;
+    max-height: calc(88vh - 8.5rem);
+    padding: var(--s4);
+    font-size: .875rem;
+    line-height: 1.6;
+}
+.legal-modal-body h1 { font-size: 1.125rem; }
+.legal-modal-body h2, .legal-modal-body h3 { font-size: 1rem; margin-top: var(--s5); }
+.legal-modal-body img { max-width: 100%; }
+
+.legal-loading { color: var(--ink-faint); }
+
+.legal-modal-foot {
+    padding: var(--s3) var(--s4);
+    border-top: 1px solid var(--line);
+    text-align: right;
+}
+
+@media (max-width: 36rem) {
+    .legal-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
+    .legal-modal-body { max-height: calc(100vh - 8.5rem); }
+}
+
+/* ------------------------------------------------------------------ accueil */
+
+.home-head { text-align: center; margin-bottom: var(--s7); }
+.home-title { font-size: clamp(1.75rem, 6vw, 2.5rem); font-weight: 800; }
+.home-sub { color: var(--ink-soft); max-width: 34rem; margin: 0 auto var(--s5); }
+
+.home-trust {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); justify-content: center;
+    font-size: .8125rem; font-weight: 600; color: var(--ink-soft);
+}
+.home-trust li { display: inline-flex; align-items: center; gap: var(--s2); }
+
+.home-section { margin-bottom: var(--s7); }
+
+.section-heading {
+    font-size: .8125rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--ink-faint);
+    margin-bottom: var(--s4);
+}
+
+/* ------------------------------------------------------------------ cartes */
+
+.sweepstake-grid {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; gap: var(--s4);
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.sweepstake-card {
+    background: var(--color-surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: box-shadow .12s ease, transform .12s ease;
+}
+.sweepstake-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
+.sweepstake-card a { display: block; text-decoration: none; color: inherit; }
+
+.sweepstake-card-image { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+
+.sweepstake-card-body {
+    display: block; padding: var(--s4);
+    text-align: center;
+}
+
+/* Le montant avant l'intitulé : c'est lui qui fait ouvrir la carte. */
+.sweepstake-card-value {
+    display: block;
+    font-size: 1.875rem; font-weight: 800; line-height: 1.1;
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+}
+.sweepstake-card-title {
+    display: block; margin-top: var(--s1);
+    font-size: .9375rem; font-weight: 600;
+}
+.sweepstake-card-meta {
+    display: block; margin: var(--s2) 0 var(--s4);
+    font-size: .75rem; color: var(--ink-faint);
+}
+
+.badge-pill {
+    display: inline-block; margin-bottom: var(--s3);
+    padding: .15rem var(--s3); border-radius: 999px;
+    font-size: .6875rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em;
+}
+.badge-pill--ending  { background: #fdecea; color: #a4271b; }
+.badge-pill--popular { background: color-mix(in srgb, var(--color-accent) 26%, transparent); color: #6b4a00; }
+.badge-pill--new     { background: #e7f6f0; color: var(--success); }
+
+/* ------------------------------------------------------------------ étapes */
+
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s3); }
+
+.step {
+    display: flex; align-items: flex-start; gap: var(--s3);
+    padding: var(--s4);
+    background: var(--color-surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+}
+.step-num {
+    flex: 0 0 auto;
+    display: grid; place-items: center;
+    width: 1.75rem; height: 1.75rem; border-radius: 999px;
+    background: var(--color-primary); color: #fff;
+    font-size: .8125rem; font-weight: 700;
+}
+.step-body { display: block; font-size: .875rem; color: var(--ink-soft); }
+.step-body strong { display: block; color: var(--ink); margin-bottom: .1rem; }
+
+/* ------------------------------------------------------------------ FAQ */
+
+.faq { display: grid; gap: var(--s2); }
+
+.faq-item {
+    background: var(--color-surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+}
+.faq-item summary {
+    padding: var(--s3) var(--s4);
+    font-size: .9375rem; font-weight: 600;
+    cursor: pointer; list-style: none;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after {
+    content: '+'; float: right;
+    font-weight: 400; color: var(--ink-faint);
+}
+.faq-item[open] summary::after { content: '−'; }
+.faq-item p {
+    margin: 0; padding: 0 var(--s4) var(--s4);
+    font-size: .875rem; color: var(--ink-soft);
+}
+
+@media (min-width: 40rem) {
+    .steps { grid-template-columns: repeat(2, 1fr); }
+}

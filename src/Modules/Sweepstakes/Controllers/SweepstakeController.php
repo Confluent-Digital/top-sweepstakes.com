@@ -247,6 +247,9 @@ final class SweepstakeController
             'lead_phone_md5' => $phoneMd5,
             'lead_ip' => $this->clientIp($request),
             'lead_user_agent' => mb_substr($request->getHeaderLine('User-Agent'), 0, 500),
+            // Transparence RGPD : la liste des destinataires a-t-elle ete
+            // consultee ? Rien d'autre ne permet de le savoir a posteriori.
+            'lead_partners_viewed' => ($input['partners_viewed'] ?? '0') === '1' ? 1 : 0,
             'lead_device' => $this->visitor->device(),
             'lead_id_sweepstake' => $sweepstakeId,
             'lead_id_variant' => $this->currentVariant($sweepstakeId),

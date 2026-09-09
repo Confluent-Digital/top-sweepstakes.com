@@ -8,110 +8,127 @@
 
 {% block content %}
     <section class="home-head">
-        {# Titre et accroche viennent des réglages : /admin/settings. #}
         <h1 class="home-title">{{ site.site_tagline }}</h1>
         <p class="home-sub">{{ site.site_intro }}</p>
+
+        <ul class="home-trust">
+            <li>{% include 'front/partials/icon.html.twig' with {name: 'gift'} only %} 100% free to enter</li>
+            <li>{% include 'front/partials/icon.html.twig' with {name: 'lock'} only %} Secure &amp; encrypted</li>
+            <li>{% include 'front/partials/icon.html.twig' with {name: 'clock'} only %} Under 2 minutes</li>
+        </ul>
     </section>
 
-    {% if sweepstakes is empty %}
-        <p class="empty-state">{{ site.site_empty_message }}</p>
-    {% else %}
-        {#
-            Toutes les cartes au même rang, y compris celle de la dotation la
-            plus élevée. Trois raisons, dans cet ordre :
+    <section class="home-section" aria-labelledby="open-sweepstakes">
+        <h2 class="section-heading" id="open-sweepstakes">Open sweepstakes</h2>
 
-            1. La liste est déjà triée par valeur décroissante : la plus grosse
-               dotation occupe déjà la première position, qui est la place la
-               plus forte d'une page qu'on balaie. L'agrandir n'ajoute pas de
-               position, seulement des pixels.
-            2. Sur mobile — l'essentiel du trafic — la grille tient sur une
-               colonne : la « grande carte » n'existerait que sur large écran,
-               c'est-à-dire pour la minorité, et il faudrait tenir deux mises en
-               page pour elle.
-            3. Surtout, la dotation la plus chère n'est pas forcément celle qui
-               convertit le mieux : une carte cadeau de 750 $ bat souvent un
-               voyage à 5 000 $ parce qu'elle paraît atteignable. Figer la mise
-               en page sur la valeur inscrit dans le gabarit une hypothèse qu'on
-               n'a pas mesurée, et empêche justement de la mesurer.
-
-            Ce qui différencie une carte reste donc le chiffre lui-même, mis en
-            évidence : c'est lui le sujet.
-        #}
-        <ul class="prize-grid">
-            {% for item in sweepstakes %}
-                {% set days_left = item.sweepstake_date_end
-                    ? (item.sweepstake_date_end|date('U') - 'today'|date('U')) // 86400
-                    : null %}
-                <li class="prize-card">
-                    {#
-                        Un seul lien, qui couvre toute la carte : le visuel, le
-                        titre et le bouton pointent la même page, et un second
-                        élément cliquable ne ferait que compliquer la cible au
-                        pouce sans ouvrir quoi que ce soit de plus.
-                    #}
-                    <a class="prize-link" href="/{{ item.sweepstake_slug }}">
-                        <span class="prize-media">
+        {% if sweepstakes is empty %}
+            <p class="empty-state">{{ site.site_empty_message }}</p>
+        {% else %}
+            <ul class="sweepstake-grid">
+                {% for item in sweepstakes %}
+                    <li class="sweepstake-card">
+                        {# Toute la carte est cliquable : une seule cible, large au pouce. #}
+                        <a href="/{{ item.sweepstake_slug }}">
                             {% if item.sweepstake_prize_image %}
                                 {% include 'front/partials/prize-image.html.twig' with {
-                                    'src': '/img/sweepstakes/' ~ item.sweepstake_id ~ '/' ~ item.sweepstake_prize_image,
-                                    'alt': item.sweepstake_prize_title ?: item.sweepstake_name,
-                                    'width': item.sweepstake_prize_image_width|default(0),
-                                    'height': item.sweepstake_prize_image_height|default(0),
-                                    'ratio_w': 400, 'ratio_h': 250,
-                                    'class': 'prize-photo',
-                                    'priority': loop.first
+                                    src: '/img/sweepstakes/' ~ item.sweepstake_id ~ '/' ~ item.sweepstake_prize_image,
+                                    alt: item.sweepstake_prize_title ?: item.sweepstake_name,
+                                    width: item.sweepstake_prize_image_width,
+                                    height: item.sweepstake_prize_image_height,
+                                    ratio_w: 400,
+                                    ratio_h: 250,
+                                    class: 'sweepstake-card-image'
                                 } only %}
-                            {% else %}
-                                {# Sans visuel, un aplat au ton du concours : répéter
-                                   le montant ici l'afficherait deux fois à trois
-                                   centimètres d'intervalle. #}
-                                <span class="prize-media--none">
-                                    {% include 'front/partials/icon.html.twig' with {'name': 'gift', 'size': 44} only %}
-                                </span>
                             {% endif %}
 
-                            {% if days_left is not null and days_left <= 14 %}
+                            <span class="sweepstake-card-body">
                                 {#
-                                    L'échéance n'est rappelée que lorsqu'elle est
-                                    proche. Affichée en permanence, « 87 jours
-                                    restants » invite à revenir plus tard —
-                                    c'est-à-dire à ne pas participer.
+                                    Le badge est dérivé des données — fin proche, affluence,
+                                    mise en ligne récente — jamais saisi : un champ « mis en
+                                    avant » se remplit une fois puis ne bouge plus, et ment.
                                 #}
-                                <span class="prize-deadline">
-                                    {% if days_left <= 0 %}Ends today
-                                    {% elseif days_left == 1 %}Ends tomorrow
-                                    {% else %}{{ days_left }} days left{% endif %}
+                                {% if item.badge %}
+                                    <span class="badge-pill badge-pill--{{ item.badge }}">
+                                        {{- {'ending': 'Ending soon', 'popular': 'Popular', 'new': 'New'}[item.badge] -}}
+                                    </span>
+                                {% endif %}
+
+                                {% if item.sweepstake_prize_value_usd > 0 %}
+                                    <span class="sweepstake-card-value">
+                                        ${{ item.sweepstake_prize_value_usd|number_format(0) }}
+                                    </span>
+                                {% endif %}
+
+                                <span class="sweepstake-card-title">
+                                    {{ item.sweepstake_prize_title ?: item.sweepstake_name }}
                                 </span>
-                            {% endif %}
-                        </span>
 
-                        <span class="prize-body">
-                            {% if item.sweepstake_prize_value_usd > 0 %}
-                                {# Le chiffre AVANT l'intitulé : c'est lui qui se
-                                   comprend sans lire, et il porte la promesse. #}
-                                <span class="prize-amount">
-                                    ${{ item.sweepstake_prize_value_usd|number_format(0) }}
+                                <span class="sweepstake-card-meta">
+                                    Free entry · No purchase necessary
+                                    {%- if item.days_left is not null and item.days_left >= 0 and item.days_left <= 14 %}
+                                        · {{ item.days_left }} day{{ item.days_left == 1 ? '' : 's' }} left
+                                    {%- endif %}
                                 </span>
-                                <span class="prize-amount-note">approximate retail value</span>
-                            {% endif %}
 
-                            <span class="prize-name">
-                                {{ item.sweepstake_prize_title ?: item.sweepstake_name }}
+                                <span class="btn btn-primary btn-block">Enter now</span>
                             </span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
 
-                            <span class="btn btn-primary btn-block prize-cta">Enter for free</span>
-                            <span class="prize-terms">
-                                No purchase necessary · 18+ · U.S. only
-                            </span>
-                        </span>
-                    </a>
+    <section class="home-section" aria-labelledby="how-it-works">
+        <h2 class="section-heading" id="how-it-works">How it works</h2>
+        <ol class="steps">
+            {% for step in [
+                {title: 'Pick a sweepstake', text: 'Choose the prize you want. Entry is always free.'},
+                {title: 'Fill in the form', text: 'It takes under two minutes. No purchase necessary.'},
+                {title: 'Browse bonus offers', text: 'Optional partner offers. Skip any you don\'t want.'},
+                {title: 'Watch your inbox', text: 'Winners are drawn at random and contacted directly.'}
+            ] %}
+                <li class="step">
+                    <span class="step-num">{{ loop.index }}</span>
+                    <span class="step-body">
+                        <strong>{{ step.title }}</strong>
+                        <span>{{ step.text }}</span>
+                    </span>
                 </li>
             {% endfor %}
-        </ul>
+        </ol>
+    </section>
 
-        <p class="home-foot">
-            Each sweepstake has its own Official Rules, eligibility and closing date — they are
-            linked from every page of the sweepstake you choose.
-        </p>
-    {% endif %}
+    <section class="home-section" aria-labelledby="faq">
+        <h2 class="section-heading" id="faq">Frequently asked questions</h2>
+        {#
+            <details> natif : l'accordéon fonctionne sans une ligne de
+            JavaScript, et reste ouvrable par la recherche du navigateur.
+        #}
+        <div class="faq">
+            {% for item in [
+                {q: 'Do I have to pay to enter?',
+                 a: 'No. Entry is completely free and no purchase is necessary. A purchase will not
+                     increase your chances of winning.'},
+                {q: 'Who can enter?',
+                 a: 'Legal residents of the United States who meet the minimum age stated in each
+                     sweepstake\'s Official Rules. Some states may be excluded — each sweepstake
+                     says which.'},
+                {q: 'Do I have to accept the bonus offers?',
+                 a: 'No. Your entry is confirmed as soon as you submit the form. The offers shown
+                     afterwards are optional, and skipping them changes nothing.'},
+                {q: 'How are winners chosen and contacted?',
+                 a: 'Winners are selected in a random drawing and contacted using the details
+                     provided at entry. Full details are in each sweepstake\'s Official Rules.'},
+                {q: 'How do I stop receiving emails?',
+                 a: 'Use the unsubscribe link in any email, or the Unsubscribe page linked at the
+                     bottom of this site.'}
+            ] %}
+                <details class="faq-item">
+                    <summary>{{ item.q }}</summary>
+                    <p>{{ item.a }}</p>
+                </details>
+            {% endfor %}
+        </div>
+    </section>
 {% endblock %}

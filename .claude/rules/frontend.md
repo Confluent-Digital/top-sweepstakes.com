@@ -19,6 +19,33 @@ chaque centaine de millisecondes se paie en taux de conversion.
 - Le JS ne conditionne jamais l'enregistrement d'un participant ni d'un clic : tout fonctionne
   sans lui, en dégradé.
 
+### Le seul script du tunnel
+
+`public/dist/js/legal-modal.js` (moins de 4 Ko, aucune dépendance) ouvre les mentions légales en
+**popin**, comme le reste du parc — voir
+`template.comparer-changer.fr/templates/1/cadre/legals_modal.twig`, qui fait la même chose avec
+jQuery et Bootstrap.
+
+Pourquoi une popin : un participant en cours de saisie qui clique sur « Privacy Policy » ne doit
+pas quitter le tunnel.
+
+**Amélioration progressive, et ce n'est pas négociable** : les liens pointent vers de vraies pages
+(`/privacy`, `/terms`…). Sans JavaScript, ou si le script échoue, ils naviguent normalement. Une
+mention légale rendue inaccessible par un script cassé serait une non-conformité, pas un défaut
+d'ergonomie.
+
+Le fragment est chargé à l'ouverture depuis `/legal-fragment/{page}` — l'inclure dans chaque page
+coûterait 65 Ko pour un document que la plupart des visiteurs n'ouvriront jamais.
+
+### `partners_viewed`
+
+La popin passe le champ caché `partners_viewed` à 1 quand la liste des destinataires est ouverte,
+et la valeur part avec le participant. C'est de la transparence RGPD que rien d'autre ne permet de
+reconstituer après coup, et le parc trace la même chose.
+
+**Ce n'est pas un consentement** : ne pas avoir ouvert la liste n'invalide rien, l'avoir ouverte ne
+vaut pas accord. C'est une circonstance, au même titre que l'IP.
+
 ## Twig
 
 - Échappement automatique. `|raw` est réservé aux champs HTML éditoriaux du back-office
