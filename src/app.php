@@ -10,6 +10,16 @@ use App\Core\Session\PhpSessionStore;
 use App\Core\Session\SessionStore;
 use App\Core\Signer;
 use App\Middleware\SecurityHeadersMiddleware;
+use App\Modules\Admin\Controllers\AuthController;
+use App\Modules\Admin\Controllers\DashboardController;
+use App\Modules\Admin\Controllers\LeadAdminController;
+use App\Modules\Admin\Controllers\OfferAdminController;
+use App\Modules\Admin\Controllers\SweepstakeAdminController;
+use App\Modules\Admin\Middleware\AdminAuthMiddleware;
+use App\Modules\Admin\Models\Repositories\AdminLeadRepository;
+use App\Modules\Admin\Models\Repositories\AdminOfferRepository;
+use App\Modules\Admin\Models\Repositories\AdminSweepstakeRepository;
+use App\Modules\Admin\Models\Repositories\AdminUserRepository;
 use App\Modules\Leads\Models\Repositories\ConsentRepository;
 use App\Modules\Leads\Models\Repositories\LeadRepository;
 use App\Modules\Leads\Models\Repositories\SuppressionRepository;
@@ -55,6 +65,13 @@ $container->set(LeadRepository::class, fn(Container $c) => new LeadRepository($c
 $container->set(ConsentRepository::class, fn(Container $c) => new ConsentRepository($c->get(Database::class)));
 $container->set(SuppressionRepository::class, fn(Container $c) => new SuppressionRepository($c->get(Database::class)));
 $container->set(OfferEventRepository::class, fn(Container $c) => new OfferEventRepository($c->get(Database::class)));
+$container->set(AdminUserRepository::class, fn(Container $c) => new AdminUserRepository($c->get(Database::class)));
+$container->set(
+    AdminSweepstakeRepository::class,
+    fn(Container $c) => new AdminSweepstakeRepository($c->get(Database::class))
+);
+$container->set(AdminOfferRepository::class, fn(Container $c) => new AdminOfferRepository($c->get(Database::class)));
+$container->set(AdminLeadRepository::class, fn(Container $c) => new AdminLeadRepository($c->get(Database::class)));
 
 // ---------------------------------------------------------------- Services metier
 $container->set(DeviceDetector::class, fn() => new DeviceDetector());
@@ -79,6 +96,43 @@ $container->set(ComplianceController::class, fn(Container $c) => new ComplianceC
     $c->get(Twig::class),
     $c->get(SuppressionRepository::class),
 ));
+// ---------------------------------------------------------------- Back-office
+$container->set(AdminAuthMiddleware::class, fn(Container $c) => new AdminAuthMiddleware(
+    $c->get(SessionStore::class),
+    $c->get(AdminUserRepository::class),
+));
+$container->set(AuthController::class, fn(Container $c) => new AuthController(
+    $c->get(Twig::class),
+    $c->get(SessionStore::class),
+    $c->get(AdminUserRepository::class),
+));
+$container->set(DashboardController::class, fn(Container $c) => new DashboardController(
+    $c->get(Twig::class),
+    $c->get(Database::class),
+));
+$container->set(SweepstakeAdminController::class, fn(Container $c) => new SweepstakeAdminController(
+    $c->get(Twig::class),
+    $c->get(AdminSweepstakeRepository::class),
+    $c->get(SweepstakeRepository::class),
+    $c->get(AdminOfferRepository::class),
+    $c->get(AdminUserRepository::class),
+));
+$container->set(OfferAdminController::class, fn(Container $c) => new OfferAdminController(
+    $c->get(Twig::class),
+    $c->get(AdminOfferRepository::class),
+    $c->get(OfferRepository::class),
+    $c->get(OfferLinkBuilder::class),
+    $c->get(AdminUserRepository::class),
+));
+$container->set(LeadAdminController::class, fn(Container $c) => new LeadAdminController(
+    $c->get(Twig::class),
+    $c->get(AdminLeadRepository::class),
+    $c->get(AdminSweepstakeRepository::class),
+    $c->get(LeadRepository::class),
+    $c->get(ConsentRepository::class),
+    $c->get(AdminUserRepository::class),
+));
+
 $container->set(LegalContentService::class, fn(Container $c) => new LegalContentService(
     $c->get(Config::class),
     $c->get(Client::class),

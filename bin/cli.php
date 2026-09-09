@@ -20,6 +20,7 @@ Commandes :
   stats:rollup [--date=YYYY-MM-DD]                     Agrege les evenements display et recalcule les eCPM
   leads:verify [--limit=200]                           Verifie email / telephone des participants recents
   gdpr:purge                                           Anonymise selon la duree de retention
+  admin:create --email= --password= [--name= --role=]  Cree un compte de back-office
 
 TXT;
 
@@ -41,7 +42,9 @@ foreach ($argvInput as $arg) {
 // registre ne peut pas etre appelee depuis la ligne de commande.
 /** @var array<string, array{class-string, string}> $registry */
 $registry = [
-    // Renseigne au fil des lots. Voir .claude/rules/tracking-stats.md.
+    'admin:create' => [App\Modules\Admin\Tasks\CreateAdminUserTask::class, 'run'],
+    // Les taches platform:report, stats:rollup, leads:verify et gdpr:purge
+    // arrivent avec le lot suivant. Voir .claude/rules/tracking-stats.md.
 ];
 
 if (!isset($registry[$command])) {

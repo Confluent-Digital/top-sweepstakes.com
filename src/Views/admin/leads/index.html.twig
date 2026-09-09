@@ -1,0 +1,98 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Participants{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Participants</h1>
+        <a class="btn btn-outline-secondary"
+           href="/admin/leads/export?{{ filters|url_encode }}">Exporter en CSV</a>
+    </div>
+
+    <form method="get" action="/admin/leads" class="card card-body mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label" for="f-sweepstake">Concours</label>
+                <select class="form-select form-select-sm" id="f-sweepstake" name="sweepstake_id">
+                    <option value="">Tous</option>
+                    {% for s in sweepstakes %}
+                        <option value="{{ s.sweepstake_id }}"
+                                {{ filters.sweepstake_id == s.sweepstake_id ? 'selected' }}>{{ s.sweepstake_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="f-email">E-mail</label>
+                <input class="form-control form-control-sm" id="f-email" name="email" value="{{ filters.email }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="f-state">Etat</label>
+                <input class="form-control form-control-sm" id="f-state" name="state"
+                       value="{{ filters.state }}" maxlength="2">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="f-subid">subid</label>
+                <input class="form-control form-control-sm" id="f-subid" name="subid" value="{{ filters.subid }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="f-from">Du</label>
+                <input type="date" class="form-control form-control-sm" id="f-from" name="from" value="{{ filters.from }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="f-to">Au</label>
+                <input type="date" class="form-control form-control-sm" id="f-to" name="to" value="{{ filters.to }}">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-primary btn-sm w-100" type="submit">Filtrer</button>
+            </div>
+        </div>
+    </form>
+
+    {# Le total porte sur le jeu filtre, pas sur la page affichee. #}
+    <p class="text-muted small">
+        {{ total|number_format(0, ',', ' ') }} participant(s) correspondant aux filtres
+        {% if pages > 1 %} — page {{ page }} sur {{ pages }}{% endif %}
+    </p>
+
+    {% if leads is empty %}
+        <div class="card card-body empty">Aucun participant ne correspond a ces filtres.</div>
+    {% else %}
+        <div class="card">
+            <table class="table table-sm mb-0 align-middle">
+                <thead>
+                <tr><th>#</th><th>Date</th><th>E-mail</th><th>Nom</th><th>Etat</th>
+                    <th>Concours</th><th>subid</th><th>Appareil</th><th></th></tr>
+                </thead>
+                <tbody>
+                {% for l in leads %}
+                    <tr>
+                        <td>{{ l.lead_id }}</td>
+                        <td class="small text-nowrap">{{ l.created_at }}</td>
+                        <td>{{ l.lead_email }}</td>
+                        <td>{{ l.lead_first_name }} {{ l.lead_last_name }}</td>
+                        <td>{{ l.lead_state ?: '—' }}</td>
+                        <td class="small">{{ l.sweepstake_name ?: '—' }}</td>
+                        <td class="small">{{ l.lead_subid ?: '(direct)' }}</td>
+                        <td class="small">{{ l.lead_device }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="/admin/leads/{{ l.lead_id }}">Fiche</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm">
+                    {% for p in max(1, page - 3)..min(pages, page + 3) %}
+                        <li class="page-item {{ p == page ? 'active' }}">
+                            <a class="page-link"
+                               href="/admin/leads?{{ filters|merge({page: p})|url_encode }}">{{ p }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% endif %}
+{% endblock %}

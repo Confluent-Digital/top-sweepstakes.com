@@ -1,0 +1,253 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}{{ sweepstake.sweepstake_id ? 'Editer un concours' : 'Nouveau concours' }}{% endblock %}
+
+{% block content %}
+    <h1 class="h4 mb-3">
+        {{ sweepstake.sweepstake_id ? sweepstake.sweepstake_name : 'Nouveau concours' }}
+    </h1>
+
+    {% if saved %}<div class="alert alert-success">Enregistre.</div>{% endif %}
+    {% if errors is not empty %}
+        <div class="alert alert-danger">Corrigez les champs signales ci-dessous.</div>
+    {% endif %}
+
+    <form method="post" action="/admin/sweepstakes/{{ sweepstake.sweepstake_id ?: 0 }}/edit">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card mb-4">
+                    <div class="card-header">Identite</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="name">Nom interne</label>
+                            <input class="form-control {{ errors.sweepstake_name is defined ? 'is-invalid' }}"
+                                   id="name" name="sweepstake_name" value="{{ sweepstake.sweepstake_name }}">
+                            {% if errors.sweepstake_name is defined %}
+                                <div class="invalid-feedback">{{ errors.sweepstake_name }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="slug">Slug (URL)</label>
+                            <input class="form-control {{ errors.sweepstake_slug is defined ? 'is-invalid' }}"
+                                   id="slug" name="sweepstake_slug" value="{{ sweepstake.sweepstake_slug }}">
+                            {% if errors.sweepstake_slug is defined %}
+                                <div class="invalid-feedback">{{ errors.sweepstake_slug }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Le slug figure dans l'URL <strong>et</strong> dans le <code>sid</code> envoye a la
+                                regie. Le changer apres publication casse l'attribution des revenus deja collectes.
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="status">Statut</label>
+                                <select class="form-select" id="status" name="sweepstake_status">
+                                    {% for value in ['draft', 'published', 'paused', 'ended'] %}
+                                        <option value="{{ value }}" {{ sweepstake.sweepstake_status == value ? 'selected' }}>{{ value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="min_age">Age minimum</label>
+                                <input type="number" class="form-control" id="min_age" name="sweepstake_min_age"
+                                       value="{{ sweepstake.sweepstake_min_age }}" min="13" max="99">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Dotation</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="prize_title">Intitule</label>
+                            <input class="form-control" id="prize_title" name="sweepstake_prize_title"
+                                   value="{{ sweepstake.sweepstake_prize_title }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="prize_value">Valeur (ARV, $)</label>
+                                <input type="number" step="0.01" class="form-control" id="prize_value"
+                                       name="sweepstake_prize_value_usd" value="{{ sweepstake.sweepstake_prize_value_usd }}">
+                                <div class="form-text text-warning-emphasis">
+                                    Au-dela de 5 000 $, NY et FL imposent enregistrement et cautionnement.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="prize_image">Fichier visuel</label>
+                                <input class="form-control" id="prize_image" name="sweepstake_prize_image"
+                                       value="{{ sweepstake.sweepstake_prize_image }}">
+                                <div class="form-text">
+                                    Depose dans <code>public/img/sweepstakes/{{ sweepstake.sweepstake_id ?: 'ID' }}/</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Champs du formulaire</div>
+                    <div class="card-body">
+                        <p class="form-text mb-3">
+                            Chaque champ coche doit avoir un usage : un champ collecte et jamais exploite
+                            coute des participants a la saisie et cree une obligation de conservation.
+                        </p>
+                        {% set active_keys = {} %}
+                        {% for f in fields %}
+                            {% set active_keys = active_keys|merge({(f.sweepstake_field_key): f}) %}
+                        {% endfor %}
+
+                        <table class="table table-sm">
+                            <thead><tr><th>Champ</th><th>Actif</th><th>Etape</th><th>Obligatoire</th></tr></thead>
+                            <tbody>
+                            {% for key in field_keys %}
+                                {% set f = active_keys[key]|default(null) %}
+                                <tr>
+                                    <td><code>{{ key }}</code></td>
+                                    <td><input type="checkbox" name="field_active[{{ key }}]" value="1" {{ f ? 'checked' }}></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="field_step[{{ key }}]">
+                                            <option value="1" {{ f and f.sweepstake_field_step == 1 ? 'selected' }}>1</option>
+                                            <option value="2" {{ f and f.sweepstake_field_step == 2 ? 'selected' }}>2</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="checkbox" name="field_required[{{ key }}]" value="1"
+                                               {{ f and f.sweepstake_field_required ? 'checked' }}></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card mb-4">
+                    <div class="card-header">Conformite</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="sponsor_name">Sponsor</label>
+                            <input class="form-control {{ errors.sweepstake_sponsor_name is defined ? 'is-invalid' }}"
+                                   id="sponsor_name" name="sweepstake_sponsor_name" value="{{ sweepstake.sweepstake_sponsor_name }}">
+                            {% if errors.sweepstake_sponsor_name is defined %}
+                                <div class="invalid-feedback">{{ errors.sweepstake_sponsor_name }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="sponsor_address">Adresse postale (CAN-SPAM)</label>
+                            <input class="form-control" id="sponsor_address" name="sweepstake_sponsor_address"
+                                   value="{{ sweepstake.sweepstake_sponsor_address }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="disclaimer">Disclaimer de marque</label>
+                            <textarea class="form-control" id="disclaimer" name="sweepstake_brand_disclaimer"
+                                      rows="2">{{ sweepstake.sweepstake_brand_disclaimer }}</textarea>
+                            <div class="form-text">Obligatoire des que la dotation porte une marque tierce.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="excluded">Etats exclus</label>
+                            <input class="form-control" id="excluded" name="sweepstake_excluded_states"
+                                   value="{{ sweepstake.sweepstake_excluded_states }}" placeholder="NY,FL">
+                            <div class="form-text">
+                                C'est <strong>cette</strong> liste qui refuse le participant. Elle doit dire
+                                exactement la meme chose que les Official Rules.
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label" for="date_start">Debut</label>
+                                <input type="date" class="form-control" id="date_start"
+                                       name="sweepstake_date_start" value="{{ sweepstake.sweepstake_date_start }}">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label" for="date_end">Fin</label>
+                                <input type="date" class="form-control {{ errors.sweepstake_date_end is defined ? 'is-invalid' }}"
+                                       id="date_end" name="sweepstake_date_end" value="{{ sweepstake.sweepstake_date_end }}">
+                                {% if errors.sweepstake_date_end is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_date_end }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label" for="rules">Official Rules (HTML)</label>
+                            <textarea class="form-control {{ errors.sweepstake_official_rules_html is defined ? 'is-invalid' }}"
+                                      id="rules" name="sweepstake_official_rules_html"
+                                      rows="10">{{ sweepstake.sweepstake_official_rules_html }}</textarea>
+                            {% if errors.sweepstake_official_rules_html is defined %}
+                                <div class="invalid-feedback">{{ errors.sweepstake_official_rules_html }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Mentions obligatoires : NO PURCHASE NECESSARY, AMOE, sponsor et adresse, dates,
+                                eligibilite et Etats exclus, ARV, probabilites, selection et publication des gagnants.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Theme &amp; SEO</div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for key, label in {'primary': 'Primaire', 'accent': 'Accent', 'background': 'Fond'} %}
+                                <div class="col-4 mb-3">
+                                    <label class="form-label" for="theme_{{ key }}">{{ label }}</label>
+                                    <input type="text" class="form-control form-control-sm" id="theme_{{ key }}"
+                                           name="theme_{{ key }}" value="{{ theme[key]|default('') }}" placeholder="#1b4dff">
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="meta_title">Titre SEO</label>
+                            <input class="form-control" id="meta_title" name="sweepstake_meta_title"
+                                   value="{{ sweepstake.sweepstake_meta_title }}">
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label" for="meta_description">Description SEO</label>
+                            <textarea class="form-control" id="meta_description"
+                                      name="sweepstake_meta_description" rows="2">{{ sweepstake.sweepstake_meta_description }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn btn-outline-secondary" href="/admin/sweepstakes">Retour</a>
+    </form>
+
+    {% if sweepstake.sweepstake_id %}
+        <hr class="my-4">
+        <div class="card">
+            <div class="card-header">Offres rattachees</div>
+            <div class="card-body">
+                <form method="post" action="/admin/sweepstakes/{{ sweepstake.sweepstake_id }}/offers">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    {% set attached_ids = attached_offers|map(o => o.sweepstake_offer_id_offer) %}
+                    {% for offer in all_offers %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="offer_ids[]"
+                                   id="offer-{{ offer.offer_id }}" value="{{ offer.offer_id }}"
+                                   {{ offer.offer_id in attached_ids ? 'checked' }}>
+                            <label class="form-check-label" for="offer-{{ offer.offer_id }}">
+                                {{ offer.offer_name }}
+                                {% if not offer.offer_active %}<span class="badge bg-secondary">inactive</span>{% endif %}
+                                {% if not offer.offer_platform_idv %}
+                                    <span class="badge bg-danger">idv manquant</span>
+                                {% endif %}
+                                <span class="text-muted small">eCPM 15 j : {{ offer.offer_ecpm_15d }}</span>
+                            </label>
+                        </div>
+                    {% else %}
+                        <p class="empty mb-0">Aucune offre. <a href="/admin/offers/new">Creez-en une</a>.</p>
+                    {% endfor %}
+                    {% if all_offers is not empty %}
+                        <button class="btn btn-primary mt-3" type="submit">Enregistrer les offres</button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

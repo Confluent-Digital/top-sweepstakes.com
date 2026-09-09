@@ -1,0 +1,77 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Participant #{{ lead.lead_id }}{% endblock %}
+
+{% block content %}
+    <h1 class="h4 mb-3">Participant #{{ lead.lead_id }}</h1>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">Identite et contexte</div>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                    {% for label, value in {
+                        'E-mail': lead.lead_email,
+                        'Prenom': lead.lead_first_name,
+                        'Nom': lead.lead_last_name,
+                        'Telephone': lead.lead_phone,
+                        'Date de naissance': lead.lead_dob,
+                        'Adresse': lead.lead_address,
+                        'Ville': lead.lead_city,
+                        'Etat': lead.lead_state,
+                        'Code postal': lead.lead_zip,
+                        'Appareil': lead.lead_device,
+                        'IP': lead.lead_ip,
+                        'subid': lead.lead_subid,
+                        'utm_source': lead.lead_utm_source,
+                        'utm_medium': lead.lead_utm_medium,
+                        'Referer': lead.lead_referer,
+                        'Inscrit le': lead.created_at
+                    } %}
+                        <tr>
+                            <th class="w-25 small">{{ label }}</th>
+                            <td class="small">{{ value ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    Preuve de consentement
+                    <span class="text-muted small">— c'est ce document qu'on produirait en cas de contestation</span>
+                </div>
+                <div class="card-body">
+                    {% if consents is empty %}
+                        <p class="empty mb-0">Aucun consentement archive pour ce participant.</p>
+                    {% else %}
+                        {% for c in consents %}
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ c.lead_consent_type }}</strong>
+                                    {% if c.lead_consent_granted %}
+                                        <span class="badge bg-success">accorde</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">refuse</span>
+                                    {% endif %}
+                                </div>
+                                {# Le texte reellement affiche au participant, tel qu'archive. #}
+                                <p class="small mt-2 mb-2">{{ c.lead_consent_text }}</p>
+                                <div class="text-muted small">
+                                    {{ c.created_at }} — IP {{ c.lead_consent_ip }}<br>
+                                    {{ c.lead_consent_page_url }}<br>
+                                    empreinte : <code>{{ c.lead_consent_text_hash|slice(0, 16) }}…</code>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a class="btn btn-outline-secondary mt-3" href="/admin/leads">Retour</a>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Offres{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Offres display</h1>
+        <a class="btn btn-primary" href="/admin/offers/new">Nouvelle offre</a>
+    </div>
+
+    {% if offers is empty %}
+        <div class="card card-body empty">Aucune offre.</div>
+    {% else %}
+        <div class="card">
+            <table class="table table-sm mb-0 align-middle">
+                <thead>
+                <tr>
+                    <th>Nom</th><th>Annonceur</th><th>Type</th><th>idv</th><th>Statut</th>
+                    <th class="text-end">Impressions</th><th class="text-end">Clics</th>
+                    <th class="text-end">CTR</th><th class="text-end">eCPM 15 j</th><th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for o in offers %}
+                    <tr>
+                        <td>{{ o.offer_name }}</td>
+                        <td class="small">{{ o.offer_advertiser ?: '—' }}</td>
+                        <td><span class="badge bg-secondary">{{ o.offer_type }}</span></td>
+                        <td>
+                            {% if o.offer_platform_idv %}
+                                <code>{{ o.offer_platform_idv }}</code>
+                            {% else %}
+                                <span class="badge bg-danger">manquant</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if o.offer_active %}
+                                <span class="badge bg-success">active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ o.impressions }}</td>
+                        <td class="text-end">{{ o.clicks }}</td>
+                        <td class="text-end">
+                            {# Sans impression, il n'y a pas de taux : le dire plutot
+                               qu'afficher 0 %, qui se lirait comme une contre-performance. #}
+                            {% if o.impressions > 0 %}
+                                {{ (o.clicks / o.impressions * 100)|number_format(2) }} %
+                            {% else %}
+                                <span class="empty">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ o.offer_ecpm_15d }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="/admin/offers/{{ o.offer_id }}/edit">Editer</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 use App\Core\Database;
+use App\Middleware\CsrfMiddleware;
+use App\Modules\Admin\Controllers\AuthController;
+use App\Modules\Admin\Controllers\DashboardController;
+use App\Modules\Admin\Controllers\LeadAdminController;
+use App\Modules\Admin\Controllers\OfferAdminController;
+use App\Modules\Admin\Controllers\SweepstakeAdminController;
+use App\Modules\Admin\Middleware\AdminAuthMiddleware;
 use App\Modules\Legal\Controllers\ComplianceController;
 use App\Modules\Legal\Controllers\LegalController;
 use App\Modules\Sweepstakes\Controllers\SweepstakeController;
@@ -40,6 +47,34 @@ $app->get('/health', function (Request $request, Response $response) use ($conta
 // ---------------------------------------------------------------- Sortie vers une offre
 // Le clic est enregistre cote serveur AVANT la redirection : voir OutController.
 $app->get('/out/{token}', OutController::class);
+
+// ---------------------------------------------------------------- Back-office
+// AdminAuthMiddleware est pose sur le GROUPE et non route par route : toute
+// route ajoutee ici est protegee par construction. C'est la seule facon de ne
+// pas laisser un ecran ouvert par oubli.
+$app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void {
+    $admin->map(['GET', 'POST'], '/login', AuthController::class . ':login');
+    $admin->get('/logout', AuthController::class . ':logout');
+
+    $admin->get('', DashboardController::class . ':index');
+    $admin->get('/', DashboardController::class . ':index');
+
+    $admin->get('/sweepstakes', SweepstakeAdminController::class . ':index');
+    $admin->get('/sweepstakes/new', SweepstakeAdminController::class . ':create');
+    $admin->map(['GET', 'POST'], '/sweepstakes/{id:[0-9]+}/edit', SweepstakeAdminController::class . ':edit');
+    $admin->post('/sweepstakes/{id:[0-9]+}/duplicate', SweepstakeAdminController::class . ':duplicate');
+    $admin->post('/sweepstakes/{id:[0-9]+}/offers', SweepstakeAdminController::class . ':attachOffers');
+
+    $admin->get('/offers', OfferAdminController::class . ':index');
+    $admin->get('/offers/new', OfferAdminController::class . ':create');
+    $admin->map(['GET', 'POST'], '/offers/{id:[0-9]+}/edit', OfferAdminController::class . ':edit');
+
+    $admin->get('/leads', LeadAdminController::class . ':index');
+    $admin->get('/leads/export', LeadAdminController::class . ':export');
+    $admin->get('/leads/{id:[0-9]+}', LeadAdminController::class . ':show');
+})
+    ->add(CsrfMiddleware::class)
+    ->add(AdminAuthMiddleware::class);
 
 // ---------------------------------------------------------------- Conformite
 // CAN-SPAM et CCPA/CPRA : ces pages sont liees depuis le pied de page de chaque

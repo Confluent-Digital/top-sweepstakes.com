@@ -1,0 +1,57 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Concours{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Concours</h1>
+        <a class="btn btn-primary" href="/admin/sweepstakes/new">Nouveau concours</a>
+    </div>
+
+    {% if sweepstakes is empty %}
+        <div class="card card-body empty">Aucun concours. Commencez par en creer un.</div>
+    {% else %}
+        <div class="card">
+            <table class="table table-sm mb-0 align-middle">
+                <thead>
+                <tr>
+                    <th>Nom</th><th>Slug</th><th>Statut</th><th>Dotation</th>
+                    <th>Periode</th><th class="text-end">Participations</th><th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for s in sweepstakes %}
+                    <tr>
+                        <td>{{ s.sweepstake_name }}</td>
+                        <td><code>{{ s.sweepstake_slug }}</code></td>
+                        <td>
+                            <span class="badge badge-status-{{ s.sweepstake_status }}">{{ s.sweepstake_status }}</span>
+                        </td>
+                        <td>
+                            {% if s.sweepstake_prize_value_usd > 0 %}
+                                ${{ s.sweepstake_prize_value_usd|number_format(0) }}
+                            {% else %}<span class="empty">—</span>{% endif %}
+                        </td>
+                        <td class="small">
+                            {{ s.sweepstake_date_start ?: '—' }} → {{ s.sweepstake_date_end ?: '—' }}
+                        </td>
+                        <td class="text-end">{{ s.entries }}</td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-sm btn-outline-secondary" href="/admin/sweepstakes/{{ s.sweepstake_id }}/edit">Editer</a>
+                            {% if s.sweepstake_status == 'published' %}
+                                <a class="btn btn-sm btn-outline-secondary" href="/{{ s.sweepstake_slug }}" target="_blank" rel="noopener">Voir</a>
+                            {% endif %}
+                            {# La duplication est le geste central : un concours proche
+                               existe presque toujours, et repartir de lui evite de
+                               ressaisir dotation, champs, theme et offres. #}
+                            <form method="post" action="/admin/sweepstakes/{{ s.sweepstake_id }}/duplicate" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-primary" type="submit">Dupliquer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
