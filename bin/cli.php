@@ -21,6 +21,9 @@ Commandes :
   leads:verify [--limit=200]                           Verifie email / telephone des participants recents
   gdpr:purge [--dry-run]                               Anonymise selon la duree de retention
   admin:create --email= --password= [--name= --role=]  Cree un compte de back-office
+  drawing:run --pending                                 Concours clos en attente de tirage
+  drawing:run --sweepstake=<id>                         Tire le finaliste d'un concours clos
+  drawing:run --grand-prize [--year=YYYY]               Tire le gagnant de l'annee
 
 TXT;
 
@@ -46,6 +49,7 @@ $registry = [
     'platform:report' => [App\Modules\Platform\Tasks\PlatformReportTask::class, 'run'],
     'stats:rollup' => [App\Modules\Stats\Tasks\StatsRollupTask::class, 'run'],
     'gdpr:purge' => [App\Modules\Leads\Tasks\GdprPurgeTask::class, 'run'],
+    'drawing:run' => [App\Modules\Drawings\Tasks\DrawingTask::class, 'run'],
     // leads:verify attend le choix d'un fournisseur de verification.
 ];
 

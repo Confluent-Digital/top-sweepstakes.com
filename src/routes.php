@@ -11,6 +11,7 @@ use App\Modules\Admin\Controllers\OfferAdminController;
 use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
+use App\Modules\Drawings\Controllers\DrawingAdminController;
 use App\Modules\Stats\Controllers\StatsController;
 use App\Modules\Legal\Controllers\ComplianceController;
 use App\Modules\Legal\Controllers\LegalController;
@@ -76,6 +77,15 @@ $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void 
     $admin->get('/leads/{id:[0-9]+}', LeadAdminController::class . ':show');
 
     $admin->map(['GET', 'POST'], '/settings', SettingController::class . ':edit');
+
+    $admin->get('/drawings', DrawingAdminController::class . ':index');
+    $admin->get('/drawings/{id:[0-9]+}', DrawingAdminController::class . ':show');
+    $admin->post('/drawings/sweepstake/{id:[0-9]+}', DrawingAdminController::class . ':runSweepstake');
+    $admin->post('/drawings/grand-prize', DrawingAdminController::class . ':runGrandPrize');
+    $admin->post(
+        '/drawings/{id:[0-9]+}/winner/{winner:[0-9]+}',
+        DrawingAdminController::class . ':updateWinner'
+    );
 
     $admin->get('/stats/offers', StatsController::class . ':offers');
     $admin->get('/stats/sources', StatsController::class . ':sources');

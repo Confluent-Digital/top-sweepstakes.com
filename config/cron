@@ -24,6 +24,16 @@ TSW=/data/www/top-sweepstakes.com
 # Verification email / telephone — a activer au lot 3.
 # */5 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php leads:verify >> logs/tasks/leads-verify.log 2>&1
 
+# ⚠️ AUCUN TIRAGE N'EST AUTOMATISE, et ce n'est pas un oubli.
+#
+# Un cron qui tirerait les concours clos chaque nuit designerait des gagnants
+# sans que personne ne l'ait decide ni ne sache quand. Un tirage est un acte :
+# il se declenche depuis /admin/drawings ou en ligne de commande, et son auteur
+# est enregistre.
+#
+# Pour ne pas les oublier, la commande ci-dessous liste ce qui attend :
+#   docker exec topsweepstakes_php php bin/cli.php drawing:run --pending
+
 # Purge RGPD — anonymisation au-dela des durees de conservation et traitement
 # des demandes d'effacement. Une fois par jour suffit ; les demandes explicites
 # doivent etre honorees sous les delais legaux, pas dans la minute.

@@ -1,0 +1,117 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Tirages{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <h1 class="page-title">Tirages au sort</h1>
+        <p class="page-sub">
+            Participer à un concours ne fait pas gagner de lot : cela donne accès au tirage annuel.
+            À la clôture d'un concours, un <strong>finaliste</strong> est tiré parmi ses
+            participants. Une fois par an, le <strong>gagnant</strong> est tiré parmi les finalistes
+            de l'année — c'est lui qui reçoit la dotation.
+        </p>
+    </div>
+
+    {% if flash %}<div class="alert alert-success">{{ flash }}</div>{% endif %}
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+    <div class="card zone-caution mb-4">
+        <div class="card-header">Lancer un tirage</div>
+        <div class="card-body">
+            {#
+                Un tirage est irréversible : il désigne un gagnant qui sera notifié.
+                Rien ne se déclenche automatiquement — un cron nocturne désignerait
+                des gagnants sans que personne ne l'ait décidé ni ne sache quand.
+            #}
+            <p class="caution-note">
+                Un tirage ne se refait pas. Le gagnant et ses suppléants sont désignés
+                définitivement, et la graine du tirage est enregistrée pour pouvoir le prouver.
+            </p>
+
+            <h3 class="section-title mt-4">Concours clos en attente</h3>
+            {% if pending is empty %}
+                <p class="empty mb-0">Aucun concours clos n'attend son tirage.</p>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Concours</th><th>Clos le</th><th></th></tr></thead>
+                        <tbody>
+                        {% for row in pending %}
+                            <tr>
+                                <td>{{ row.sweepstake_name }}</td>
+                                <td class="small">{{ row.sweepstake_date_end }}</td>
+                                <td class="row-actions">
+                                    <form method="post" action="/admin/drawings/sweepstake/{{ row.sweepstake_id }}"
+                                          onsubmit="return confirm('Tirer le finaliste de « {{ row.sweepstake_name }} » ? Cette action est définitive.');">
+                                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-caution" type="submit">Tirer le finaliste</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            <h3 class="section-title mt-4">Tirage annuel {{ grand_prize_year }}</h3>
+            {% if grand_prize_done %}
+                <p class="empty mb-0">Le tirage {{ grand_prize_year }} a déjà eu lieu.</p>
+            {% else %}
+                <form method="post" action="/admin/drawings/grand-prize"
+                      onsubmit="return confirm('Tirer le gagnant {{ grand_prize_year }} parmi les finalistes de l\'année ? Cette action est définitive.');">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <input type="hidden" name="year" value="{{ grand_prize_year }}">
+                    <button class="btn btn-caution" type="submit">
+                        Tirer le gagnant {{ grand_prize_year }}
+                    </button>
+                    <span class="form-text ms-2">
+                        Seule une année terminée peut être tirée : l'année en cours peut encore
+                        désigner des finalistes.
+                    </span>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Tirages effectués</div>
+        {% if drawings is empty %}
+            <div class="card-body empty">Aucun tirage à ce jour.</div>
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>#</th><th>Type</th><th>Portée</th><th>Effectué le</th><th>Par</th>
+                        <th class="num">Éligibles</th><th class="num">Tirés</th><th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for d in drawings %}
+                        <tr>
+                            <td class="num">{{ d.drawing_id }}</td>
+                            <td>
+                                {% if d.drawing_type == 'grand_prize' %}
+                                    <span class="badge bg-success">grand prix</span>
+                                {% else %}
+                                    <span class="badge text-bg-light">finaliste</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ d.sweepstake_name ?: 'Année ' ~ d.drawing_year }}</td>
+                            <td class="small text-nowrap">{{ d.drawing_executed_at }}</td>
+                            <td class="small">{{ d.drawing_executed_by }}</td>
+                            <td class="num">{{ d.drawing_pool_size }}</td>
+                            <td class="num">{{ d.winners }}</td>
+                            <td class="row-actions">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="/admin/drawings/{{ d.drawing_id }}">Vérifier</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -331,38 +331,56 @@ that do not identify the sweepstakes by title cannot be attributed and will not 
 one (1) mail-in entry per outer envelope. Mail-in entries receive the same chance of winning as
 online entries.</p>
 
-<h3>6. Prize</h3>
-<p>One (1) prize will be awarded: {$data['prize_title']}, with an approximate retail value (ARV) of
-\${$value} USD. The prize is awarded &ldquo;as is&rdquo; with no warranty or guarantee, either
-express or implied. No substitution, cash equivalent or transfer of the prize is permitted, except
-at the sole discretion of the Sponsor.</p>
+<h3>6. What You Are Entering</h3>
+<p><strong>Entering this sweepstakes does not by itself award a prize.</strong> It enters you into
+a two-stage selection:</p>
+<ol>
+<li><strong>Finalist drawing.</strong> Within thirty (30) days after this sweepstakes closes, one
+(1) <strong>Finalist</strong> will be selected at random from among all eligible entries received
+during the Sweepstakes Period. Being selected as a Finalist does not award a prize.</li>
+<li><strong>Annual Grand Prize drawing.</strong> Within sixty (60) days after the end of each
+calendar year, one (1) <strong>Grand Prize Winner</strong> will be selected at random from among
+all Finalists designated during that calendar year. <strong>Only the Grand Prize Winner receives a
+prize.</strong></li>
+</ol>
 
-<h3>7. Odds of Winning</h3>
-<p>The odds of winning depend on the total number of eligible entries received during the
-Sweepstakes Period.</p>
+<h3>7. Grand Prize</h3>
+<p>One (1) Grand Prize will be awarded per calendar year: {$data['prize_title']}, with an
+approximate retail value (ARV) of \${$value} USD. The prize is awarded &ldquo;as is&rdquo; with no
+warranty or guarantee, either express or implied. No substitution, cash equivalent or transfer of
+the prize is permitted, except at the sole discretion of the Sponsor. Finalists who are not
+selected as the Grand Prize Winner receive nothing.</p>
 
-<h3>8. Winner Selection and Notification</h3>
-<p>The winner will be selected in a random drawing from among all eligible entries received.
-The drawing will be conducted within thirty (30) days following the end of the Sweepstakes Period.
-The potential winner will be notified using the contact details provided at entry and must respond
+<h3>8. Odds of Winning</h3>
+<p>The odds of being selected as a Finalist depend on the total number of eligible entries received
+for this sweepstakes during the Sweepstakes Period. The odds of a Finalist being selected as the
+Grand Prize Winner depend on the total number of Finalists designated during the calendar year.
+Your overall odds of winning the Grand Prize are the product of the two.</p>
+
+<h3>9. Selection and Notification</h3>
+<p>Both drawings are conducted by a random selection process that is recorded and can be
+independently reproduced by the Sponsor, so that any selection can be verified after the fact.</p>
+<p>Potential winners will be notified using the contact details provided at entry and must respond
 within seven (7) days of the first notification attempt. If a potential winner cannot be reached,
-declines the prize, or is found ineligible, the prize may be forfeited and an alternate winner
-selected at random.</p>
+declines, or is found ineligible, an alternate &mdash; drawn at random at the same time as the
+original selection, not chosen afterwards &mdash; will be substituted.</p>
 
-<h3>9. Winners List</h3>
-<p>For the name of the winner, send a written request together with a self-addressed envelope to
-the Sponsor at the address listed in Section 1 within ninety (90) days of the end of the
-Sweepstakes Period. The Sponsor will bear the return postage.</p>
+<h3>10. Winners List</h3>
+<p>For the name of the Grand Prize Winner, send a written request together with a self-addressed
+envelope to the Sponsor at the address listed in Section 1 within ninety (90) days of the end of the
+calendar year in which the Grand Prize drawing took place. The Sponsor will bear the return
+postage.</p>
 
-<h3>10. Taxes</h3>
-<p>All federal, state and local taxes on the prize are the sole responsibility of the winner. The
-winner may be required to complete and return tax documentation before the prize is released.</p>
+<h3>11. Taxes</h3>
+<p>All federal, state and local taxes on the Grand Prize are the sole responsibility of the Grand
+Prize Winner, who may be required to complete and return tax documentation before the prize is
+released.</p>
 
-<h3>11. Privacy</h3>
+<h3>12. Privacy</h3>
 <p>Information collected from entrants is subject to the Sponsor&rsquo;s Privacy Policy, available
 from the footer of this website.</p>
 
-<h3>12. No Affiliation with Third-Party Brands</h3>
+<h3>13. No Affiliation with Third-Party Brands</h3>
 <p>This sweepstakes is administered solely by the Sponsor. It is not sponsored by, endorsed by, or
 affiliated with {$data['brand']} or any other third-party brand. All trademarks are the property of
 their respective owners.</p>

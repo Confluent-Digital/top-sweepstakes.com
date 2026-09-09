@@ -44,6 +44,53 @@ la même chose — c'est cette colonne qui refuse effectivement le participant.
 ⚠️ **Point business à remonter, pas à trancher dans le code** : New York et la Floride imposent
 enregistrement et cautionnement au-delà de 5 000 $ d'ARV.
 
+## Tirages au sort
+
+**Le modèle : participer ne fait pas gagner de lot, cela donne accès au tirage annuel.**
+
+1. À la clôture d'un concours, un **finaliste** est tiré parmi ses participants. Il ne reçoit rien.
+2. Une fois par an, le **gagnant** est tiré parmi les finalistes de l'année. Lui seul reçoit la
+   dotation annoncée.
+
+Les Official Rules doivent décrire **exactement** ce mécanisme. Un règlement qui annonce un lot par
+concours pendant que le système n'en attribue qu'un par an est la première chose que regarde un
+procureur d'État — et c'est indéfendable, quel que soit le reste.
+
+### Ce qui rend un tirage défendable
+
+Un tirage doit être **prouvable**, pas seulement effectué. Trois données sont enregistrées avec
+lui, et elles n'existent que pour ça :
+
+| Donnée | Ce qu'elle prouve |
+|---|---|
+| `drawing_seed` | la graine, tirée **avant** de lire la liste des participants |
+| `drawing_pool_hash` | l'empreinte de la liste exacte, dans l'ordre |
+| `drawing_pool_size` | leur nombre |
+
+Ensemble, elles permettent de rejouer le tirage et de retrouver le même gagnant — c'est la réponse
+à « comment ce gagnant a-t-il été choisi ? ». `/admin/drawings/{id}` le refait à la demande.
+
+**L'ordre des opérations n'est pas négociable** : la graine est tirée avant la lecture de la liste.
+L'inverse permettrait de la choisir en fonction du gagnant qu'elle produit, sans que rien dans les
+données ne le révèle.
+
+**Les suppléants sortent du même tirage.** Le règlement promet un remplaçant « sélectionné au
+hasard » si le gagnant ne répond pas ; en désigner un après coup ne serait plus du hasard.
+
+**Aucun tirage n'est automatique.** Il se déclenche depuis le back-office ou en ligne de commande,
+et son auteur est enregistré. Un cron qui tirerait les concours clos chaque nuit désignerait des
+gagnants sans que personne ne l'ait décidé ni ne sache quand.
+
+### Rétention
+
+Un participant tiré est **retenu hors de la purge** (`lead_drawing_hold`) : un gagnant anonymisé à
+36 mois ne peut plus être contacté, et la preuve du tirage perd son objet. La retenue se lève à la
+main, une fois le lot remis — c'est une décision, pas une échéance, et `gdpr:purge` signale à
+chaque passage les retenues qui dépassent la durée de conservation.
+
+Une **demande d'effacement explicite prime sur la retenue** : le droit du participant passe avant
+notre confort de preuve.
+
 ## Preuve de consentement — `t_lead_consent`
 
 Table **en écriture seule**. Aucun `UPDATE`, aucun `DELETE` hors purge RGPD.

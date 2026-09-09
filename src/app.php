@@ -31,6 +31,11 @@ use App\Modules\Leads\Services\ConsentCatalog;
 use App\Modules\Leads\Services\ConsentRecorder;
 use App\Modules\Leads\Services\LeadValidator;
 use App\Modules\Leads\Services\SpamGuard;
+use App\Modules\Drawings\Controllers\DrawingAdminController;
+use App\Modules\Drawings\Models\Repositories\DrawingRepository;
+use App\Modules\Drawings\Services\DrawingRandomizer;
+use App\Modules\Drawings\Services\DrawingService;
+use App\Modules\Drawings\Tasks\DrawingTask;
 use App\Modules\Leads\Tasks\GdprPurgeTask;
 use App\Modules\Legal\Controllers\ComplianceController;
 use App\Modules\Legal\Services\LegalContentService;
@@ -105,6 +110,26 @@ $container->set(PlatformReportTask::class, fn(Container $c) => new PlatformRepor
     $c->get(PlatformReportRepository::class),
     $c->get(LoggerInterface::class),
 ));
+// ---------------------------------------------------------------- Tirages
+$container->set(DrawingRepository::class, fn(Container $c) => new DrawingRepository($c->get(Database::class)));
+$container->set(DrawingRandomizer::class, fn() => new DrawingRandomizer());
+$container->set(DrawingService::class, fn(Container $c) => new DrawingService(
+    $c->get(DrawingRepository::class),
+    $c->get(SweepstakeRepository::class),
+    $c->get(DrawingRandomizer::class),
+    $c->get(LoggerInterface::class),
+));
+$container->set(DrawingAdminController::class, fn(Container $c) => new DrawingAdminController(
+    $c->get(Twig::class),
+    $c->get(DrawingRepository::class),
+    $c->get(DrawingService::class),
+    $c->get(AdminUserRepository::class),
+));
+$container->set(DrawingTask::class, fn(Container $c) => new DrawingTask(
+    $c->get(DrawingService::class),
+    $c->get(DrawingRepository::class),
+));
+
 $container->set(GdprPurgeTask::class, fn(Container $c) => new GdprPurgeTask(
     $c->get(Database::class),
     $c->get(StatsRepository::class),

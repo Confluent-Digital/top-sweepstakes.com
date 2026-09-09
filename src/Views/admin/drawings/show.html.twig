@@ -1,0 +1,132 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Tirage #{{ drawing.drawing_id }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <h1 class="page-title">
+            Tirage #{{ drawing.drawing_id }} —
+            {{ drawing.sweepstake_name ?: 'Grand prix ' ~ drawing.drawing_year }}
+        </h1>
+        <p class="page-sub">{{ drawing.drawing_notes }}</p>
+    </div>
+
+    {% if flash %}<div class="alert alert-success">{{ flash }}</div>{% endif %}
+
+    {#
+        La vérification rejoue le tirage à partir de ce qui a été enregistré :
+        la graine et l'empreinte de la liste. C'est la réponse à « comment ce
+        gagnant a-t-il été choisi ? », et elle doit tenir des mois plus tard.
+    #}
+    <div class="card mb-4 {{ replay_matches and replay.pool_matches ? '' : 'zone-caution' }}">
+        <div class="card-header">Vérification du tirage</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="kpi">
+                        <div class="kpi-label">La liste des participants est-elle celle du tirage ?</div>
+                        <div class="kpi-value">
+                            {% if replay.pool_matches %}
+                                <span class="text-success">Oui</span>
+                            {% else %}
+                                <span class="text-danger">Non</span>
+                            {% endif %}
+                        </div>
+                        <div class="kpi-label">
+                            {{ drawing.drawing_pool_size }} au tirage, {{ pool_now }} aujourd'hui
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="kpi">
+                        <div class="kpi-label">Rejouer la graine redonne-t-il les mêmes gagnants ?</div>
+                        <div class="kpi-value">
+                            {% if replay_matches %}
+                                <span class="text-success">Oui</span>
+                            {% else %}
+                                <span class="text-danger">Non</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if not replay.pool_matches %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    La liste des participants a changé depuis le tirage. Ce n'est pas
+                    nécessairement anormal — un participant anonymisé ou effacé à sa demande en
+                    sort — mais la preuve ne peut plus être refaite à l'identique. Le tirage
+                    d'origine reste celui qui fait foi : graine
+                    <code>{{ drawing.drawing_seed }}</code>, empreinte
+                    <code>{{ drawing.drawing_pool_hash|slice(0, 24) }}…</code>
+                </div>
+            {% endif %}
+
+            <table class="table table-sm mt-3 mb-0">
+                <tbody>
+                <tr><th class="w-25">Graine</th><td><code>{{ drawing.drawing_seed }}</code></td></tr>
+                <tr><th>Empreinte de la liste</th><td><code>{{ drawing.drawing_pool_hash }}</code></td></tr>
+                <tr><th>Période</th><td>{{ drawing.drawing_period_start }} → {{ drawing.drawing_period_end }}</td></tr>
+                <tr><th>Effectué</th><td>{{ drawing.drawing_executed_at }} par {{ drawing.drawing_executed_by }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Gagnant et suppléants
+            <span class="fw-normal text-body-secondary">— tirés dans le même geste</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                <tr><th>Rang</th><th>Participant</th><th>État</th><th>Statut</th><th>Notifié</th><th></th></tr>
+                </thead>
+                <tbody>
+                {% for w in winners %}
+                    <tr>
+                        <td>
+                            {% if w.drawing_winner_rank == 1 %}
+                                <span class="badge bg-success">gagnant</span>
+                            {% else %}
+                                <span class="badge text-bg-light">suppléant {{ w.drawing_winner_rank - 1 }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ w.lead_first_name }} {{ w.lead_last_name }}
+                            <span class="d-block small text-body-secondary">{{ w.lead_email }}</span>
+                            {% if w.lead_anonymized_at %}
+                                <span class="badge bg-danger flag-blocking">ANONYMISÉ — non contactable</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ w.lead_state ?: '—' }}</td>
+                        <td>{{ w.drawing_winner_status }}</td>
+                        <td class="small">{{ w.drawing_winner_notified_at ?: '—' }}</td>
+                        <td class="row-actions">
+                            <form method="post"
+                                  action="/admin/drawings/{{ drawing.drawing_id }}/winner/{{ w.drawing_winner_id }}">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <select class="form-select form-select-sm d-inline-block w-auto" name="status">
+                                    {% for status in statuses %}
+                                        <option value="{{ status }}"
+                                                {{ w.drawing_winner_status == status ? 'selected' }}>{{ status }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">Enregistrer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="scope-note mt-3">
+        Les participants tirés sont retenus hors de la purge automatique tant que leur statut n'est
+        pas réglé : un gagnant anonymisé ne peut plus être contacté, et la preuve du tirage perdrait
+        son objet.
+    </p>
+
+    <a class="btn btn-outline-secondary mt-3" href="/admin/drawings">Retour</a>
+{% endblock %}

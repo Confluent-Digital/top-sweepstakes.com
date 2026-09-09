@@ -61,6 +61,7 @@ final class GdprPurgeTask
 
         $anonymizedByRequest = $this->anonymizeRequested();
         $anonymizedByAge = $this->anonymizeExpired();
+        $held = $this->countHeldPastRetention();
         $orphanConsents = $this->purgeOrphanConsents();
         $deletedEvents = $this->stats->purgeEvents(self::EVENT_RETENTION_MONTHS);
 
@@ -75,11 +76,18 @@ final class GdprPurgeTask
             'ok' => true,
             'message' => sprintf(
                 '%d participant(s) anonymise(s) sur demande, %d par anciennete, '
-                . '%d preuve(s) orpheline(s) retiree(s), %d evenement(s) supprime(s).',
+                . '%d preuve(s) orpheline(s) retiree(s), %d evenement(s) supprime(s).%s',
                 $anonymizedByRequest,
                 $anonymizedByAge,
                 $orphanConsents,
-                $deletedEvents
+                $deletedEvents,
+                $held > 0
+                    ? sprintf(
+                        ' ⚠ %d participant(s) retenu(s) par un tirage au-dela de la duree de '
+                        . 'conservation : lever la retenue une fois les lots remis.',
+                        $held
+                    )
+                    : ''
             ),
         ];
     }
@@ -98,7 +106,28 @@ final class GdprPurgeTask
         return (int) $this->database->connection()->fetchOne(
             'SELECT COUNT(*) FROM t_lead l
               WHERE l.lead_anonymized_at IS NULL
+                AND l.lead_drawing_hold = 0
                 AND l.created_at < (NOW() - INTERVAL :months MONTH)',
+            ['months' => self::LEAD_RETENTION_MONTHS]
+        );
+    }
+
+    /**
+     * Participants retenus par un tirage alors que leur duree de conservation
+     * est depassee.
+     *
+     * Une retenue est temporaire par nature : elle couvre le temps de remettre
+     * un lot. Conservee indefiniment, elle devient une exception permanente a
+     * la duree de conservation — c'est-a-dire un manquement. La tache le
+     * signale a chaque passage plutot que de le laisser s'installer.
+     */
+    private function countHeldPastRetention(): int
+    {
+        return (int) $this->database->connection()->fetchOne(
+            'SELECT COUNT(*) FROM t_lead
+              WHERE lead_drawing_hold = 1
+                AND lead_anonymized_at IS NULL
+                AND created_at < (NOW() - INTERVAL :months MONTH)',
             ['months' => self::LEAD_RETENTION_MONTHS]
         );
     }
@@ -155,10 +184,24 @@ final class GdprPurgeTask
         );
     }
 
+    /**
+     * Anonymisation par anciennete, **sauf les participants retenus par un
+     * tirage**.
+     *
+     * Un gagnant ou un suppleant doit rester joignable jusqu'a la remise du
+     * lot, et la preuve du tirage doit lui survivre : un tirage dont les
+     * gagnants sont anonymises n'est plus verifiable. La retenue est levee a la
+     * main, une fois le lot remis — c'est une decision, pas une echeance.
+     *
+     * Une demande d'effacement explicite, elle, prime : le droit du participant
+     * passe avant notre confort de preuve.
+     */
     private function anonymizeExpired(): int
     {
         return $this->anonymizeWhere(
-            'l.lead_anonymized_at IS NULL AND l.created_at < (NOW() - INTERVAL :months MONTH)',
+            'l.lead_anonymized_at IS NULL
+             AND l.lead_drawing_hold = 0
+             AND l.created_at < (NOW() - INTERVAL :months MONTH)',
             ['months' => self::LEAD_RETENTION_MONTHS]
         );
     }
