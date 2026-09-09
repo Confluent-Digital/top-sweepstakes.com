@@ -33,6 +33,17 @@
             </p>
         {% endif %}
 
+        {# Le disclaimer de marque doit etre lu AVANT le bouton : place plus bas,
+
+           le visiteur qui clique ne l'a jamais vu. #}
+
+        {% if sweepstake.sweepstake_brand_disclaimer %}
+
+            <p class="disclaimer disclaimer--hero">{{ sweepstake.sweepstake_brand_disclaimer }}</p>
+
+        {% endif %}
+
+
         <div class="hero-cta">
             <a class="btn btn-primary btn-lg btn-block" href="/{{ sweepstake.sweepstake_slug }}/entry">
                 Enter for your chance to win
@@ -65,10 +76,6 @@
             </div>
         {% endif %}
     </section>
-
-    {% if sweepstake.sweepstake_brand_disclaimer %}
-        <p class="disclaimer">{{ sweepstake.sweepstake_brand_disclaimer }}</p>
-    {% endif %}
 
     <section class="legal-summary">
         <p>

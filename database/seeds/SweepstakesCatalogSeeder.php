@@ -168,6 +168,19 @@ final class SweepstakesCatalogSeeder extends AbstractSeed
 
         if ($existing !== false && $existing !== null) {
             $id = (int) $existing;
+
+            // Un concours qui a deja collecte ne se reecrit pas : decaler sa
+            // periode de participation ou son reglement sous les pieds de
+            // participants deja inscrits leur retirerait la base sur laquelle
+            // ils se sont engages.
+            $entries = (int) $this->scalar(
+                'SELECT COUNT(*) FROM t_lead WHERE lead_id_sweepstake = :id',
+                ['id' => $id]
+            );
+            if ($entries > 0) {
+                return;
+            }
+
             $sets = [];
             foreach (array_keys($row) as $column) {
                 $sets[] = $column . ' = :' . $column;
@@ -293,13 +306,14 @@ final class SweepstakesCatalogSeeder extends AbstractSeed
 
 <h3>2. Eligibility</h3>
 <p>Open only to legal residents of the fifty (50) United States and the District of Columbia who
-are at least eighteen (18) years of age at the time of entry. Void in Rhode Island, New York, and
-wherever else prohibited or restricted by law. Employees of the Sponsor, its affiliates,
+are at least {$this->spellAge()} years of age at the time of entry. Void in
+{$this->excludedStateNames()}, and wherever else prohibited or restricted by law. Employees of the Sponsor, its affiliates,
 subsidiaries, advertising and promotion agencies, and the immediate family members of, and any
 persons domiciled with, any such employees, are not eligible to enter or win.</p>
 
 <h3>3. Sweepstakes Period</h3>
-<p>The sweepstakes begins on {$start} and ends on {$end} (the &ldquo;Sweepstakes Period&rdquo;).
+<p>The sweepstakes begins on {$start} at 12:00:00 AM Eastern Time and ends on {$end} at
+11:59:59 PM Eastern Time (the &ldquo;Sweepstakes Period&rdquo;).
 Entries submitted before or after the Sweepstakes Period will not be eligible.</p>
 
 <h3>4. How to Enter</h3>
@@ -308,12 +322,14 @@ entry per person and per email address for the duration of the Sweepstakes Perio
 incomplete, illegible, or submitted by automated means are void.</p>
 
 <h3>5. Alternate Method of Entry (AMOE)</h3>
-<p>To enter without submitting the online form, hand-print your full name, mailing address, email
-address, date of birth and telephone number on a plain 3&quot; x 5&quot; card and mail it in a
-hand-addressed, stamped envelope to the Sponsor at the address listed in Section 1. Mail-in entries
-must be postmarked before the end of the Sweepstakes Period and received within seven (7) days
-thereafter. Limit one (1) mail-in entry per outer envelope. Mail-in entries receive the same chance
-of winning as online entries.</p>
+<p>To enter without submitting the online form, hand-print <strong>the title of this sweepstakes
+(&ldquo;{$data['name']}&rdquo;)</strong> together with {$this->amoeFields($data)} on a plain
+3&quot; x 5&quot; card and mail it in a hand-addressed envelope bearing sufficient international
+postage to the Sponsor at the address listed in Section 1. Mail-in entries must be postmarked
+before the end of the Sweepstakes Period and received within thirty (30) days thereafter. Cards
+that do not identify the sweepstakes by title cannot be attributed and will not be eligible. Limit
+one (1) mail-in entry per outer envelope. Mail-in entries receive the same chance of winning as
+online entries.</p>
 
 <h3>6. Prize</h3>
 <p>One (1) prize will be awarded: {$data['prize_title']}, with an approximate retail value (ARV) of
@@ -334,8 +350,9 @@ declines the prize, or is found ineligible, the prize may be forfeited and an al
 selected at random.</p>
 
 <h3>9. Winners List</h3>
-<p>For the name of the winner, send a stamped, self-addressed envelope to the Sponsor at the address
-listed in Section 1 within ninety (90) days of the end of the Sweepstakes Period.</p>
+<p>For the name of the winner, send a written request together with a self-addressed envelope to
+the Sponsor at the address listed in Section 1 within ninety (90) days of the end of the
+Sweepstakes Period. The Sponsor will bear the return postage.</p>
 
 <h3>10. Taxes</h3>
 <p>All federal, state and local taxes on the prize are the sole responsibility of the winner. The
@@ -350,6 +367,71 @@ from the footer of this website.</p>
 affiliated with {$data['brand']} or any other third-party brand. All trademarks are the property of
 their respective owners.</p>
 HTML;
+    }
+
+    /**
+     * Champs a porter sur la carte 3x5.
+     *
+     * Ils suivent ce que le formulaire collecte reellement. Le gabarit exigeait
+     * un telephone et une adresse postale sur TOUS les concours : un
+     * participant par courrier fournissait donc des donnees que le formulaire
+     * en ligne ne demande pas, sans aucun cadre de consentement — pour le
+     * telephone, sans consentement TCPA.
+     *
+     * @param array<string,mixed> $data
+     */
+    private function amoeFields(array $data): string
+    {
+        $labels = [
+            'first_name' => 'your full name',
+            'email' => 'your email address',
+            'address' => 'your mailing address',
+            'city' => 'your city',
+            'state' => 'your state',
+            'zip' => 'your ZIP code',
+            'dob' => 'your date of birth',
+            'phone' => 'your telephone number',
+        ];
+
+        $collected = [];
+        foreach ($data['fields'] as [$key, , ]) {
+            if (isset($labels[$key])) {
+                $collected[$labels[$key]] = true;
+            }
+        }
+        // Le nom et l'adresse postale sont indispensables pour notifier et
+        // remettre un lot, meme quand le formulaire ne les demande pas.
+        $collected['your full name'] = true;
+        $collected['your mailing address'] = true;
+
+        $list = array_keys($collected);
+        $last = array_pop($list);
+
+        return $list === [] ? $last : implode(', ', $list) . ' and ' . $last;
+    }
+
+    /** L'age minimum, en toutes lettres, depuis la colonne et non en dur. */
+    private function spellAge(int $age = 18): string
+    {
+        $words = [18 => 'eighteen', 19 => 'nineteen', 21 => 'twenty-one'];
+        return sprintf('%s (%d)', $words[$age] ?? (string) $age, $age);
+    }
+
+    /**
+     * Les Etats exclus, en toutes lettres, depuis la meme constante que la
+     * colonne. Ecrits en dur, les deux divergeaient a la premiere modification
+     * en back-office — et c'est la colonne qui refuse le participant, pendant
+     * que le reglement continuerait d'annoncer autre chose.
+     */
+    private function excludedStateNames(): string
+    {
+        $names = [];
+        foreach (explode(',', self::EXCLUDED_STATES) as $code) {
+            $names[] = \App\Modules\Leads\Services\UsStates::name(trim($code)) ?? trim($code);
+        }
+
+        $last = array_pop($names);
+        return $names === [] ? $last : implode(', ', $names) . ' and ' . $last;
     }
 
     private function sponsorName(): string
