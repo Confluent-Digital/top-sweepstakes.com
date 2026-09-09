@@ -1,0 +1,72 @@
+{#
+    Un champ du formulaire, rendu depuis `t_sweepstake_field`.
+
+    Les attributs mobiles (type, inputmode, autocomplete) sont choisis ici : ce
+    sont eux qui evitent au visiteur de basculer de clavier a chaque champ.
+#}
+{% set key = field.sweepstake_field_key %}
+{% set label = field.sweepstake_field_label ?: {
+    'email': 'Email address',
+    'first_name': 'First name',
+    'last_name': 'Last name',
+    'address': 'Street address',
+    'city': 'City',
+    'state': 'State',
+    'zip': 'ZIP code',
+    'phone': 'Phone number',
+    'dob': 'Date of birth',
+    'gender': 'Gender'
+}[key]|default(key) %}
+
+<div class="field{% if error %} field--error{% endif %}">
+    <label for="field-{{ key }}">
+        {{ label }}{% if not field.sweepstake_field_required %} <span class="optional">(optional)</span>{% endif %}
+    </label>
+
+    {% if key == 'state' %}
+        <select id="field-{{ key }}" name="{{ key }}" autocomplete="address-level1"
+                {% if field.sweepstake_field_required %}required{% endif %}>
+            <option value="">Select your state</option>
+            {% for code, name in states %}
+                <option value="{{ code }}" {% if value == code %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+
+    {% elseif key == 'gender' %}
+        <select id="field-{{ key }}" name="{{ key }}"
+                {% if field.sweepstake_field_required %}required{% endif %}>
+            <option value="">Select</option>
+            {% for option, text in {'female': 'Female', 'male': 'Male', 'other': 'Other'} %}
+                <option value="{{ option }}" {% if value == option %}selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+        </select>
+
+    {% else %}
+        {% set types = {
+            'email': 'email', 'phone': 'tel', 'dob': 'date',
+            'zip': 'text', 'address': 'text', 'city': 'text',
+            'first_name': 'text', 'last_name': 'text'
+        } %}
+        {% set modes = {'phone': 'tel', 'zip': 'numeric', 'email': 'email'} %}
+        {% set completes = {
+            'email': 'email', 'phone': 'tel', 'first_name': 'given-name',
+            'last_name': 'family-name', 'address': 'address-line1',
+            'city': 'address-level2', 'zip': 'postal-code', 'dob': 'bday'
+        } %}
+
+        <input type="{{ types[key]|default('text') }}"
+               id="field-{{ key }}"
+               name="{{ key }}"
+               value="{{ value }}"
+               {% if modes[key] is defined %}inputmode="{{ modes[key] }}"{% endif %}
+               {% if completes[key] is defined %}autocomplete="{{ completes[key] }}"{% endif %}
+               {% if key == 'zip' %}maxlength="10" pattern="[0-9]{5}(-[0-9]{4})?"{% endif %}
+               {% if field.sweepstake_field_required %}required{% endif %}
+               {% if error %}aria-invalid="true" aria-describedby="error-{{ key }}"{% endif %}>
+    {% endif %}
+
+    {# L'erreur est affichee AU champ concerne, et la saisie n'est pas perdue. #}
+    {% if error %}
+        <p class="field-error" id="error-{{ key }}">{{ error }}</p>
+    {% endif %}
+</div>

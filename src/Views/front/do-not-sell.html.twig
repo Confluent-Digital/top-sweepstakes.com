@@ -1,0 +1,38 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ title }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+    <article class="legal-page">
+        <h1>{{ title }}</h1>
+
+        {% if done %}
+            <p class="alert" role="status">{{ success_message }}</p>
+        {% else %}
+            <p>
+                Under the California Consumer Privacy Act and similar state laws, you may ask us to
+                stop selling or sharing your personal information, or to delete it.
+            </p>
+
+            {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+
+            <form method="post" action="/do-not-sell" class="entry-form">
+                <div class="field{% if error %} field--error{% endif %}">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" name="email" value="{{ email }}"
+                           inputmode="email" autocomplete="email" required>
+                </div>
+
+                <div class="field">
+                    <label for="request_type">Your request</label>
+                    <select id="request_type" name="request_type">
+                        <option value="do_not_sell">Do not sell or share my personal information</option>
+                        <option value="delete_request">Delete my personal information</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Submit my request</button>
+            </form>
+        {% endif %}
+    </article>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ sweepstake.sweepstake_meta_title ?: sweepstake.sweepstake_name }}{% endblock %}
+{% block description %}{{ sweepstake.sweepstake_meta_description }}{% endblock %}
+
+{% block content %}
+    <section class="hero">
+        {% if sweepstake.sweepstake_prize_image %}
+            {# Dimensions declarees : le bouton ne doit pas se deplacer au
+               chargement de l'image, au moment ou le visiteur vise. #}
+            <img class="hero-prize"
+                 src="/img/sweepstakes/{{ sweepstake.sweepstake_id }}/{{ sweepstake.sweepstake_prize_image }}"
+                 alt="{{ sweepstake.sweepstake_prize_title }}"
+                 width="480" height="300" fetchpriority="high">
+        {% endif %}
+
+        <h1 class="hero-title">{{ sweepstake.sweepstake_prize_title ?: sweepstake.sweepstake_name }}</h1>
+
+        {% if sweepstake.sweepstake_prize_value_usd > 0 %}
+            <p class="hero-value">Approximate retail value:
+                ${{ sweepstake.sweepstake_prize_value_usd|number_format(2) }}</p>
+        {% endif %}
+
+        <a class="btn btn-primary btn-lg" href="/{{ sweepstake.sweepstake_slug }}/entry">
+            Enter for your chance to win
+        </a>
+
+        <ul class="hero-reassurance">
+            <li>⏱ Takes less than 2 minutes</li>
+            <li>🔒 256-bit SSL encryption</li>
+            <li>🎁 No purchase necessary</li>
+        </ul>
+    </section>
+
+    {% if sweepstake.sweepstake_brand_disclaimer %}
+        <p class="disclaimer">{{ sweepstake.sweepstake_brand_disclaimer }}</p>
+    {% endif %}
+
+    <section class="legal-summary">
+        <p>
+            Open to legal residents of the United States who are at least
+            {{ sweepstake.sweepstake_min_age }} years old.
+            {% if sweepstake.sweepstake_excluded_states %}
+                Void in {{ sweepstake.sweepstake_excluded_states }}.
+            {% endif %}
+            {% if sweepstake.sweepstake_date_end %}
+                Ends {{ sweepstake.sweepstake_date_end|date('F j, Y') }}.
+            {% endif %}
+            See the <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a> for complete details.
+        </p>
+    </section>
+{% endblock %}

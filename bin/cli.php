@@ -39,8 +39,9 @@ foreach ($argvInput as $arg) {
 
 // Registre des taches : commande => [classe, methode]. Une tache absente du
 // registre ne peut pas etre appelee depuis la ligne de commande.
+/** @var array<string, array{class-string, string}> $registry */
 $registry = [
-    // Renseigne au fil des lots. Voir .claude/rules/tasks-cron.md.
+    // Renseigne au fil des lots. Voir .claude/rules/tracking-stats.md.
 ];
 
 if (!isset($registry[$command])) {

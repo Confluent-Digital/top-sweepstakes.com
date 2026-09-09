@@ -1,0 +1,28 @@
+{#
+    Format coupon : texte a gauche, visuel a droite, un SEUL lien qui enveloppe
+    l'ensemble.
+
+    C'est exactement le bug historique a ne pas reproduire : dans
+    meilleursconcours.com ce format porte trois liens distincts avec le meme
+    identifiant d'offre, et compte donc trois impressions et jusqu'a trois clics
+    pour une seule offre.
+#}
+<a class="offer-link offer-link--coupon"
+   href="{{ offer.out_url }}"
+   {% if offer.target_blank %}target="_blank" rel="noopener sponsored"{% else %}rel="sponsored"{% endif %}
+   data-offer="{{ offer.id }}">
+    <div class="offer-coupon-text">
+        {% if offer.headline %}
+            <span class="offer-headline">{{ offer.headline }}</span>
+        {% endif %}
+        {# Contenu editorial du back-office, jamais une saisie de participant. #}
+        {{ offer.text_html|raw }}
+        <span class="btn btn-accent offer-cta">{{ offer.cta_label }}</span>
+    </div>
+    {% if offer.image %}
+        <div class="offer-coupon-image">
+            <img src="/img/offers/{{ offer.image }}" alt="{{ offer.headline ?: offer.name }}"
+                 loading="lazy" width="200" height="200">
+        </div>
+    {% endif %}
+</a>

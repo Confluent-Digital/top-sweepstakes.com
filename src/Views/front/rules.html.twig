@@ -1,0 +1,25 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Official Rules — {{ sweepstake.sweepstake_name }}{% endblock %}
+
+{% block content %}
+    <article class="legal-page">
+        <h1>Official Rules</h1>
+        <p class="legal-subtitle">{{ sweepstake.sweepstake_name }}</p>
+
+        {% if sweepstake.sweepstake_official_rules_html %}
+            {# Contenu editorial du back-office. #}
+            {{ sweepstake.sweepstake_official_rules_html|raw }}
+        {% else %}
+            {#
+                Un concours publie DOIT avoir ses Official Rules. L'absence se
+                signale explicitement plutot que d'afficher une page vide qui
+                laisserait croire qu'il n'y a pas de regles.
+            #}
+            <p class="alert alert-error">
+                The Official Rules for this sweepstake are being finalized.
+                Please contact us before entering.
+            </p>
+        {% endif %}
+    </article>
+{% endblock %}

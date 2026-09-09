@@ -1,0 +1,11 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ title }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+    <article class="legal-page">
+        <h1>{{ title }}</h1>
+        {# Fragment servi par legals.confluent-digital.com. #}
+        {{ content|raw }}
+    </article>
+{% endblock %}

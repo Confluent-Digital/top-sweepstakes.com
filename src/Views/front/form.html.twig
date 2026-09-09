@@ -1,0 +1,74 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Step {{ step }} of {{ total_steps }} — {{ sweepstake.sweepstake_name }}{% endblock %}
+
+{% block content %}
+    <section class="form-section">
+        {# Progression honnete : le pourcentage correspond aux etapes reellement
+           franchies. Une barre a 90 % des la premiere etape se paie en abandons. #}
+        <div class="progress" role="progressbar"
+             aria-valuenow="{{ (step - 1) * 100 // total_steps }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: {{ (step - 1) * 100 // total_steps }}%"></div>
+        </div>
+        <p class="progress-label">Step {{ step }} of {{ total_steps }}</p>
+
+        <h1 class="form-title">
+            {% if step == 1 %}Tell us who you are{% else %}Almost done — where can we reach you?{% endif %}
+        </h1>
+
+        {% if errors is not empty %}
+            <p class="alert alert-error" role="alert">Please correct the highlighted fields below.</p>
+        {% endif %}
+
+        <form method="post" action="{{ action }}" novalidate class="entry-form">
+            {% for field in fields %}
+                {% include 'front/partials/field.html.twig' with {
+                    field: field,
+                    value: values[field.sweepstake_field_key]|default(''),
+                    error: errors[field.sweepstake_field_key]|default(null),
+                    states: states
+                } only %}
+            {% endfor %}
+
+            {% if consents is not empty %}
+                <fieldset class="consents">
+                    <legend class="sr-only">Your consent</legend>
+                    {% for consent in consents %}
+                        {#
+                            Le texte affiche ici est EXACTEMENT celui archive dans
+                            t_lead_consent : meme chaine, meme source. Voir
+                            .claude/rules/legal-us.md.
+                            Aucune case n'est pre-cochee.
+                        #}
+                        <label class="consent{% if errors['consent_' ~ consent.type] is defined %} consent--error{% endif %}">
+                            <input type="checkbox"
+                                   name="consent_{{ consent.type }}"
+                                   value="1"
+                                   {% if consent.required %}data-required="1"{% endif %}>
+                            <span>{{ consent.text }}</span>
+                        </label>
+                        {% if errors['consent_' ~ consent.type] is defined %}
+                            <p class="field-error">{{ errors['consent_' ~ consent.type] }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </fieldset>
+            {% endif %}
+
+            {# Piege a robots : un champ invisible qu'un humain ne remplit jamais. #}
+            <div class="hp" aria-hidden="true">
+                <label for="website">Leave this field empty</label>
+                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+                {% if step < total_steps %}Continue{% else %}Complete my entry{% endif %}
+            </button>
+        </form>
+
+        <p class="form-note">
+            By continuing you agree to our
+            <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a>.
+            No purchase necessary.
+        </p>
+    </section>
+{% endblock %}

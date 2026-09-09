@@ -1,0 +1,52 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}You&rsquo;re entered! — {{ sweepstake.sweepstake_name }}{% endblock %}
+
+{% block content %}
+    {#
+        La participation est DEJA enregistree. Le dire clairement, et laisser un
+        chemin de sortie visible : un visiteur qui croit devoir cliquer pour
+        valider son inscription clique par contrainte, et l'annonceur recoit du
+        trafic sans intention.
+    #}
+    <section class="entry-confirmed">
+        <h1>✅ You&rsquo;re entered!</h1>
+        <p class="lead">
+            Your entry for the <strong>{{ sweepstake.sweepstake_prize_title ?: sweepstake.sweepstake_name }}</strong>
+            is confirmed. Nothing else is required.
+        </p>
+    </section>
+
+    {% if blocks is not empty %}
+        <section class="offers">
+            <p class="offers-intro">
+                While you&rsquo;re here — these optional offers from our partners help keep this
+                sweepstake free to enter. Interested? Great. Not interested? Just skip them.
+            </p>
+
+            {% for group in blocks %}
+                <div class="offer-block offer-block--{{ group.block ? group.block.offer_block_layout : 'grid' }}">
+                    {% if group.block and group.block.offer_block_title %}
+                        <h2 class="offer-block-title">{{ group.block.offer_block_title }}</h2>
+                    {% endif %}
+
+                    <ul class="offer-list">
+                        {% for offer in group.offers %}
+                            <li class="offer offer--{{ offer.type }}">
+                                {% if offer.type == 'coupon' %}
+                                    {% include 'front/partials/offer_coupon.html.twig' with {offer: offer} only %}
+                                {% else %}
+                                    {% include 'front/partials/offer_banner.html.twig' with {offer: offer} only %}
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        </section>
+    {% endif %}
+
+    <p class="offers-skip">
+        <a class="btn btn-secondary" href="{{ thankyou_url }}">Continue without any offers &rarr;</a>
+    </p>
+{% endblock %}

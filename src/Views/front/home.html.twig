@@ -1,0 +1,32 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Enter to win — {{ app_name }}{% endblock %}
+
+{% block content %}
+    <section class="hero hero--home">
+        <h1>Enter today&rsquo;s sweepstakes</h1>
+        <p class="hero-sub">No purchase necessary. Open to U.S. residents 18 and older.</p>
+    </section>
+
+    {% if sweepstakes is empty %}
+        <p class="empty-state">No sweepstakes are open right now. Please check back soon.</p>
+    {% else %}
+        <ul class="sweepstake-grid">
+            {% for item in sweepstakes %}
+                <li class="sweepstake-card">
+                    <a href="/{{ item.sweepstake_slug }}">
+                        {% if item.sweepstake_prize_image %}
+                            <img src="/img/sweepstakes/{{ item.sweepstake_id }}/{{ item.sweepstake_prize_image }}"
+                                 alt="{{ item.sweepstake_prize_title }}" width="320" height="200" loading="lazy">
+                        {% endif %}
+                        <h2>{{ item.sweepstake_prize_title ?: item.sweepstake_name }}</h2>
+                        {% if item.sweepstake_prize_value_usd > 0 %}
+                            <p class="prize-value">${{ item.sweepstake_prize_value_usd|number_format(0) }} value</p>
+                        {% endif %}
+                        <span class="btn btn-primary">Enter now</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

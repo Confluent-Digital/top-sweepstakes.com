@@ -1,0 +1,67 @@
+{#
+    Gabarit unique du tunnel, pour TOUS les concours.
+
+    Le theme (couleurs, police, visuel) arrive en variables CSS depuis
+    `t_sweepstake.theme`. Il n'existe ni feuille de style ni gabarit par
+    concours : voir .claude/rules/sweepstakes.md.
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{% endblock %}">
+    {# Trafic paye : rien de ce tunnel n'a vocation a etre indexe. #}
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="/dist/css/front.css">
+    <style>
+        :root {
+            --color-primary: {{ theme.primary|default('#1b4dff') }};
+            --color-accent: {{ theme.accent|default('#ff9900') }};
+            --color-text: {{ theme.text|default('#161a22') }};
+            --color-bg: {{ theme.background|default('#f5f7fb') }};
+            --color-surface: {{ theme.surface|default('#ffffff') }};
+            --font-family: {{ theme.font|default('system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')|raw }};
+        }
+    </style>
+</head>
+<body>
+<header class="site-header">
+    <a class="site-logo" href="/">{{ app_name }}</a>
+    <span class="site-badge">🔒 Secure &amp; encrypted</span>
+</header>
+
+<main class="site-main">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <nav class="footer-links">
+        {% if sweepstake is defined and sweepstake %}
+            <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a>
+        {% endif %}
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/partners">Marketing Partners</a>
+        {# Exige par le CCPA/CPRA : le lien doit etre visible sur chaque page. #}
+        <a href="/do-not-sell">Do Not Sell or Share My Personal Information</a>
+        <a href="/unsubscribe">Unsubscribe</a>
+    </nav>
+
+    {# CAN-SPAM : adresse postale physique de l'annonceur. #}
+    {% if sweepstake is defined and sweepstake and sweepstake.sweepstake_sponsor_address %}
+        <p class="footer-address">
+            {{ sweepstake.sweepstake_sponsor_name }} — {{ sweepstake.sweepstake_sponsor_address }}
+        </p>
+    {% endif %}
+
+    {% if sweepstake is defined and sweepstake and sweepstake.sweepstake_brand_disclaimer %}
+        <p class="footer-disclaimer">{{ sweepstake.sweepstake_brand_disclaimer }}</p>
+    {% endif %}
+
+    <p class="footer-copyright">&copy; {{ "now"|date("Y") }} {{ app_name }}. All rights reserved.</p>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>
