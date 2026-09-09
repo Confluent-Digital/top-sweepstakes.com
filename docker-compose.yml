@@ -40,6 +40,10 @@ services:
       - topsweepstakes_mariadb
     networks:
       - topsweepstakes-network
+      # Reseau du parc : il donne acces au service de contenus legaux
+      # (legalscd_nginx) sans sortir sur Internet ni negocier de TLS. C'est ce
+      # que font les autres sites du parc.
+      - comparer-changer-network
     logging:
       driver: "json-file"
       options:
@@ -79,3 +83,5 @@ services:
 networks:
   topsweepstakes-network:
     driver: bridge
+  comparer-changer-network:
+    external: true

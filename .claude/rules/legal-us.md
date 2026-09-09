@@ -85,7 +85,13 @@ dans la définition large de « share » : la page de partenaires doit refléter
 
 ## Fragments legals
 
-`https://legals.confluent-digital.com/?page=<page>&lang=en&domain_name=top-sweepstakes.com`
+**Le service est appelé en interne en priorité.** `legalscd_nginx` est joignable par le réseau
+`comparer-changer-network`, que le conteneur PHP rejoint : pas de sortie Internet, pas de
+négociation TLS. C'est ce que font les autres sites du parc — voir
+`template.comparer-changer.fr/public/legals.php`. L'URL publique reste le repli, configurée par
+`LEGALS_BASE_URL`.
+
+`http://legalscd_nginx/?page=<page>&lang=en&domain_name=top-sweepstakes.com`
 renvoie un **fragment HTML**, pas une page complète. `LegalController` le met en cache disque
 (`LEGALS_CACHE_TTL`) et **dégrade proprement** si le service ne répond pas : une page légale vide
 est une non-conformité, pas un incident d'affichage.
@@ -106,6 +112,23 @@ la seule chose qui distingue un fragment d'une page d'erreur, le code HTTP étan
 `conditions-generales`, `politique-vie-privee` et `partenaires` existent ;
 **`cookies` n'existe pas en `en`** et il n'y a pas de page `do-not-sell`. Ces fragments sont à
 créer dans le dépôt `legals.confluent-digital.com` — travail éditorial et juridique, pas logiciel.
+
+## Identité de l'éditeur
+
+Elle est saisie dans `/admin/settings` et doit dire **exactement** la même chose que les mentions
+légales servies par le service de contenus : une adresse en pied de page qui diffère de celle des
+mentions légales est un motif de contestation offert.
+
+Valeurs de référence, telles qu'elles figurent dans `mentions-legales` :
+SAS Confluent Digital, Espace Wojo, 15 rue des Cuirassiers, 69003 Lyon — SIRET 840 203 939 00045 —
+`contact@confluent-digital.com`.
+
+⚠️ **Cette adresse est française, et le site s'adresse au marché américain.** CAN-SPAM n'exige pas
+une adresse aux États-Unis, donc le pied de page est conforme. Mais l'**AMOE** des Official Rules
+est l'adresse où l'on poste une participation par courrier : la faire partir en France est légal,
+inhabituel, et se discute — c'est un arbitrage à porter au commanditaire, pas une décision de code.
+C'est pourquoi l'adresse du **sponsor du concours** prime sur celle du site sur les pages d'un
+concours.
 
 ## Rétention
 

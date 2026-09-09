@@ -129,13 +129,43 @@ final class LegalContentService
         return true;
     }
 
+    /**
+     * Interroge le service de contenus, l'hote interne d'abord.
+     *
+     * `legalscd_nginx` est joignable par le reseau `comparer-changer-network` :
+     * pas de sortie Internet, pas de negociation TLS, quelques millisecondes au
+     * lieu de quelques dizaines. C'est ce que font les autres sites du parc
+     * (cf. `template.comparer-changer.fr/public/legals.php`).
+     *
+     * L'URL publique reste le repli : le reseau du parc peut etre indisponible,
+     * ou le site tourner ailleurs.
+     */
     private function fetch(string $remotePage): ?string
     {
-        $base = rtrim((string) $this->config->get('LEGALS_BASE_URL', ''), '/');
-        if ($base === '') {
-            return null;
+        foreach ($this->hosts() as $base) {
+            $body = $this->fetchFrom($base, $remotePage);
+            if ($body !== null) {
+                return $body;
+            }
         }
+        return null;
+    }
 
+    /** @return list<string> */
+    private function hosts(): array
+    {
+        $hosts = [];
+        foreach (['LEGALS_INTERNAL_URL', 'LEGALS_BASE_URL'] as $key) {
+            $value = rtrim((string) $this->config->get($key, ''), '/');
+            if ($value !== '') {
+                $hosts[] = $value;
+            }
+        }
+        return $hosts;
+    }
+
+    private function fetchFrom(string $base, string $remotePage): ?string
+    {
         try {
             $response = $this->http->get($base . '/', [
                 'query' => [
@@ -152,7 +182,12 @@ final class LegalContentService
             }
             return (string) $response->getBody();
         } catch (\Throwable $e) {
-            $this->logger->warning('Service de contenus legaux injoignable', [
+            // Journalise en information et non en avertissement : l'echec de
+            // l'hote interne est attendu hors du reseau du parc, et le repli
+            // suit immediatement. Seule l'absence totale de contenu, tracee
+            // par fragment(), est un vrai probleme.
+            $this->logger->info('Contenu legal : hote injoignable, repli', [
+                'host' => $base,
                 'page' => $remotePage,
                 'message' => $e->getMessage(),
             ]);
