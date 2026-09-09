@@ -113,6 +113,31 @@ la seule chose qui distingue un fragment d'une page d'erreur, le code HTTP étan
 **`cookies` n'existe pas en `en`** et il n'y a pas de page `do-not-sell`. Ces fragments sont à
 créer dans le dépôt `legals.confluent-digital.com` — travail éditorial et juridique, pas logiciel.
 
+## Les liens légaux se pilotent, ils ne sont pas codés
+
+`/admin/settings` choisit **quels documents légaux figurent en pied de page**, et sous quel
+libellé. Aucun texte légal n'est écrit dans ce dépôt : tout vient du service mutualisé.
+
+C'est configurable parce que **sa couverture varie par langue et que son contenu peut être faux** :
+
+- `cookies` et `cgu` n'existent pas en anglais — le service y répond 200 avec un avertissement PHP,
+  écarté par `looksLikeContent()` ;
+- au moment d'écrire ceci, **`conditions-generales` sert la politique de confidentialité** en
+  anglais, en espagnol et en néerlandais. Le fichier `src/conditions-generales/en/text.html` de
+  `legals.confluent-digital.com` commence par « CONFLUENT DIGITAL PERSONAL DATA PROTECTION
+  POLICY ». Ce n'est pas propre à ce site : tout le parc qui affiche ses CGU dans ces langues sert
+  le mauvais document.
+
+L'écran teste la disponibilité en direct, mais **« répond » ne veut pas dire « bon document »** :
+la vérification est technique, elle ne lit pas ce qu'elle reçoit. Un document se relit avant d'être
+affiché.
+
+⚠️ **Un document cité dans un texte de consentement doit rester atteignable.** Les textes de
+`ConsentCatalog` renvoient aux Official Rules, aux Terms of Service et à la Privacy Policy : retirer
+l'un de ces liens fait accepter au participant un document qu'il ne peut pas lire. L'écran des
+réglages le signale ; le corriger passe soit par le contenu chez legals, soit par le texte de
+consentement — et ce second choix est juridique, pas technique.
+
 ## Identité de l'éditeur
 
 Elle est saisie dans `/admin/settings` et doit dire **exactement** la même chose que les mentions

@@ -7,6 +7,7 @@ namespace App\Modules\Admin\Controllers;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
 use App\Modules\Admin\Models\Repositories\SettingRepository;
 use App\Modules\Admin\Services\ImageUploadService;
+use App\Modules\Legal\Services\LegalContentService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\UploadedFileInterface;
@@ -38,6 +39,7 @@ final class SettingController
         private SettingRepository $settings,
         private ImageUploadService $uploads,
         private AdminUserRepository $users,
+        private LegalContentService $legal,
     ) {
     }
 
@@ -53,6 +55,7 @@ final class SettingController
                 $submitted[$field] = trim((string) ($input[$field] ?? ''));
             }
 
+            $submitted['site_legal_links'] = $this->extractLegalLinks($input);
             $errors = $this->validate($submitted);
 
             if ($errors === []) {
@@ -84,7 +87,84 @@ final class SettingController
             'values' => $values,
             'errors' => $errors,
             'saved' => $request->getQueryParams()['saved'] ?? null,
+            'legal_pages' => LegalContentService::PAGES,
+            'legal_selected' => $this->decodeLegalLinks($values['site_legal_links'] ?? ''),
+            // Testé pour de vrai : la couverture de legals varie par langue, et
+            // une page absente y répond 200 avec un avertissement PHP.
+            'legal_availability' => $this->legal->availability(),
+            // Un document cite dans un texte de consentement mais absent du
+            // pied de page : le participant a accepte quelque chose qu'il ne
+            // pouvait pas lire.
+            'legal_cited_missing' => $this->citedButNotLinked(
+                $this->decodeLegalLinks($values['site_legal_links'] ?? '')
+            ),
         ]);
+    }
+
+    /**
+     * Documents nommes dans les textes de consentement mais pas affiches.
+     *
+     * Les textes de `ConsentCatalog` renvoient a des documents ; s'ils ne sont
+     * pas atteignables, le participant a accepte quelque chose qu'il ne pouvait
+     * pas lire. Le controle est volontairement grossier — une recherche de
+     * libelle — parce que le seul cas qui compte est celui d'un document retire
+     * du pied de page alors qu'il reste cite.
+     *
+     * @param array<string,string> $linked
+     * @return list<string>
+     */
+    private function citedButNotLinked(array $linked): array
+    {
+        $cited = [
+            'Terms of Service' => 'terms',
+            'Privacy Policy' => 'privacy',
+        ];
+
+        $missing = [];
+        foreach ($cited as $label => $page) {
+            if (!array_key_exists($page, $linked)) {
+                $missing[] = $label;
+            }
+        }
+        return $missing;
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     */
+    private function extractLegalLinks(array $input): string
+    {
+        $pages = (array) ($input['legal_page'] ?? []);
+        $labels = (array) ($input['legal_label'] ?? []);
+
+        $links = [];
+        foreach ($pages as $page) {
+            $page = (string) $page;
+            if (!$this->legal->isKnownPage($page)) {
+                continue;
+            }
+            $label = trim((string) ($labels[$page] ?? ''));
+            $links[] = ['page' => $page, 'label' => $label !== '' ? $label : $page];
+        }
+
+        return json_encode($links, JSON_UNESCAPED_UNICODE) ?: '[]';
+    }
+
+    /** @return array<string,string> page => libelle */
+    private function decodeLegalLinks(string $raw): array
+    {
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $links = [];
+        foreach ($decoded as $link) {
+            if (is_array($link) && isset($link['page'])) {
+                $links[(string) $link['page']] = (string) ($link['label'] ?? $link['page']);
+            }
+        }
+        return $links;
     }
 
     /**

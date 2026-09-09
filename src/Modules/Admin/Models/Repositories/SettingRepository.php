@@ -36,6 +36,17 @@ final class SettingRepository
         'site_favicon' => '',
         'site_og_image' => '',
         'site_empty_message' => 'No sweepstakes are open right now. Please check back soon.',
+        // Pages legales affichees en pied de page, au format JSON :
+        // [{"page":"privacy","label":"Privacy Policy"}, ...]
+        //
+        // Pilotable depuis le back-office parce que la couverture de
+        // legals.confluent-digital.com varie par langue : `cgu` et `cookies`
+        // n'existent pas en anglais, et un lien qui ne mene nulle part vaut
+        // moins que pas de lien. Une page dont le contenu se revele faux se
+        // retire ici, sans mise en production.
+        'site_legal_links' => '[{"page":"privacy","label":"Privacy Policy"},'
+            . '{"page":"legal","label":"Legal Notice"},'
+            . '{"page":"partners","label":"Marketing Partners"}]',
     ];
 
     /** @var array<string,string>|null */

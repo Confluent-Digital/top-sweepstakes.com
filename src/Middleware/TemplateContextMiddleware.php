@@ -35,11 +35,41 @@ final class TemplateContextMiddleware implements MiddlewareInterface
         // Une base injoignable ne doit pas empecher d'afficher une page
         // d'erreur : les reglages degradent sur leurs valeurs par defaut.
         try {
-            $environment->addGlobal('site', $this->settings->all());
+            $settings = $this->settings->all();
         } catch (\Throwable) {
-            $environment->addGlobal('site', SettingRepository::DEFAULTS);
+            $settings = SettingRepository::DEFAULTS;
         }
 
+        $environment->addGlobal('site', $settings);
+        // Decode ici plutot que dans le gabarit : Twig n'a pas de filtre
+        // json_decode, et en ajouter un pour un seul usage compliquerait la
+        // lecture des vues pour rien.
+        $environment->addGlobal('legal_links', $this->decodeLinks($settings['site_legal_links'] ?? ''));
+
         return $handler->handle($request);
+    }
+
+    /**
+     * @return list<array{page: string, label: string}>
+     */
+    private function decodeLinks(string $raw): array
+    {
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $links = [];
+        foreach ($decoded as $link) {
+            if (!is_array($link) || !isset($link['page'])) {
+                continue;
+            }
+            $page = (string) $link['page'];
+            $links[] = [
+                'page' => $page,
+                'label' => (string) ($link['label'] ?? $page),
+            ];
+        }
+        return $links;
     }
 }

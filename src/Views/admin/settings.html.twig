@@ -121,6 +121,81 @@
                 </div>
 
                 <div class="card mb-4">
+                    <div class="card-header">
+                        Liens légaux
+                        <span class="fw-normal text-body-secondary">— servis par legals.confluent-digital.com</span>
+                    </div>
+                    <div class="card-body">
+                        {% if errors.legal_links is defined %}
+                            <div class="alert alert-danger">{{ errors.legal_links }}</div>
+                        {% endif %}
+
+                        <p class="form-text">
+                            Aucun texte légal n'est écrit dans ce dépôt : tout vient du service de
+                            contenus mutualisé. On choisit ici lesquels afficher en pied de page,
+                            et sous quel libellé.
+                        </p>
+
+                        {% for page, remote in legal_pages %}
+                            {% set available = legal_availability[page]|default(false) %}
+                            <div class="row g-2 align-items-center mb-2">
+                                <div class="col-auto">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="legal_page[]" id="legal-{{ page }}" value="{{ page }}"
+                                           {{ page in legal_selected|keys ? 'checked' }}>
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-check-label" for="legal-{{ page }}">
+                                        <code>{{ page }}</code>
+                                    </label>
+                                </div>
+                                <div class="col">
+                                    <input class="form-control form-control-sm" name="legal_label[{{ page }}]"
+                                           value="{{ legal_selected[page]|default('') }}"
+                                           placeholder="Libellé affiché">
+                                </div>
+                                <div class="col-auto">
+                                    {#
+                                        Testé en direct : la couverture du service varie par langue.
+                                        Une page absente y répond 200 avec un avertissement PHP, ce
+                                        qu'aucun code HTTP ne signale.
+                                    #}
+                                    {% if available %}
+                                        <span class="badge text-bg-light">répond</span>
+                                    {% else %}
+                                        <span class="badge bg-danger flag-blocking">INDISPONIBLE EN {{ site_lang|default('EN')|upper }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        {% if legal_cited_missing is not empty %}
+                            <div class="alert alert-danger mt-3">
+                                <strong>Document cité mais non affiché :
+                                    {{ legal_cited_missing|join(', ') }}.</strong>
+                                Le texte de consentement du formulaire y renvoie
+                                (« I agree to the Official Rules, the Terms of Service and the
+                                Privacy Policy »). Un participant accepte donc un document qu'il
+                                ne peut pas lire.
+                                <br>
+                                Deux issues : rétablir le lien une fois le contenu corrigé côté
+                                <code>legals.confluent-digital.com</code>, ou retirer la mention
+                                du texte de consentement — ce second choix relève du juridique,
+                                pas de l'écran.
+                            </div>
+                        {% endif %}
+
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <strong>« Répond » ne veut pas dire « bon document ».</strong>
+                            La vérification est technique : elle voit si le service renvoie un
+                            contenu, pas s'il s'agit du bon. Relisez chaque page avant de
+                            l'afficher — au moment d'écrire ceci, <code>terms</code> répond mais
+                            sert la politique de confidentialité, et non les conditions générales.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
                     <div class="card-header">Visuels</div>
                     <div class="card-body">
                         <div class="mb-4">

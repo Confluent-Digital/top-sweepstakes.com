@@ -48,9 +48,14 @@
         {% if sweepstake is defined and sweepstake %}
             <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a>
         {% endif %}
-        <a href="/privacy" data-legal="privacy">Privacy Policy</a>
-        <a href="/terms" data-legal="terms">Terms of Service</a>
-        <a href="/partners" data-legal="partners">Marketing Partners</a>
+        {#
+            Liens légaux pilotés depuis /admin/settings : la couverture du
+            service de contenus varie par langue, et un lien qui ne mène nulle
+            part — ou vers le mauvais document — vaut moins que pas de lien.
+        #}
+        {% for link in legal_links|default([]) %}
+            <a href="/{{ link.page }}" data-legal="{{ link.page }}">{{ link.label }}</a>
+        {% endfor %}
         {# Exigé par le CCPA/CPRA : le lien doit être visible sur chaque page. #}
         <a href="/do-not-sell">Do Not Sell or Share My Personal Information</a>
         <a href="/unsubscribe">Unsubscribe</a>

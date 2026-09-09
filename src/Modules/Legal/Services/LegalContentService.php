@@ -49,6 +49,25 @@ final class LegalContentService
     }
 
     /**
+     * Pages qui rendent aujourd'hui un contenu exploitable, dans la langue du
+     * site.
+     *
+     * Sert au back-office : la couverture de legals varie par langue, et une
+     * page absente y repond 200 avec un avertissement PHP. Plutot que de le
+     * documenter et d'esperer qu'on s'en souvienne, on regarde.
+     *
+     * @return array<string,bool> chemin public => disponible
+     */
+    public function availability(): array
+    {
+        $status = [];
+        foreach (array_keys(self::PAGES) as $page) {
+            $status[$page] = $this->fragment($page) !== null;
+        }
+        return $status;
+    }
+
+    /**
      * Fragment de la page demandee, ou null si elle est introuvable et
      * qu'aucune version en cache n'existe.
      */
