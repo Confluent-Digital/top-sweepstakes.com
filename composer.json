@@ -1,0 +1,53 @@
+{
+    "name": "confluent-digital/top-sweepstakes",
+    "description": "Top Sweepstakes — moteur de jeux-concours US avec coregistration en display.",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "ext-simplexml": "*",
+        "slim/slim": "^4.12",
+        "slim/psr7": "^1.6",
+        "slim/twig-view": "^3.3",
+        "twig/twig": "^3.8",
+        "php-di/php-di": "^7.0",
+        "doctrine/dbal": "^3.7",
+        "vlucas/phpdotenv": "^5.6",
+        "monolog/monolog": "^3.5",
+        "guzzlehttp/guzzle": "^7.8"
+    },
+    "require-dev": {
+        "robmorgan/phinx": "^0.16",
+        "phpunit/phpunit": "^10.5",
+        "phpstan/phpstan": "^1.11",
+        "squizlabs/php_codesniffer": "^3.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {}
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse src --level=5",
+        "cs": "phpcs --standard=PSR12 src",
+        "cs:fix": "phpcbf --standard=PSR12 src",
+        "phinx": "phinx",
+        "migrate": "phinx migrate -e dev",
+        "seed": "phinx seed:run -e dev"
+    }
+}
