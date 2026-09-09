@@ -1,0 +1,175 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Réserves d'ouverture{% endblock %}
+
+{#
+    Cet écran répond à une seule question : peut-on ouvrir le site au trafic
+    payé aujourd'hui ? Le verdict est donc en haut, en une phrase, avant toute
+    liste — un opérateur qui ne lit que la première ligne doit savoir.
+#}
+{% block content %}
+    {% set counts = report.counts %}
+
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Réserves d'ouverture</h1>
+            <div class="page-sub">
+                Ce qui n'est pas fait — contrôlé automatiquement ou déclaré · dernière évaluation
+                {{ report.checked_at }}
+            </div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/readiness?refresh=1">
+                <i class="bi bi-arrow-clockwise"></i> Réévaluer
+            </a>
+        </div>
+    </div>
+
+    {% if saved %}
+        <div class="alert alert-success py-2"><i class="bi bi-check2"></i> Décision enregistrée.</div>
+    {% endif %}
+    {% if error == 'note' %}
+        <div class="alert alert-danger py-2">
+            <i class="bi bi-exclamation-triangle"></i> Une note est obligatoire pour accepter un risque,
+            et pour fermer une réserve que le contrôle voit toujours ouverte.
+        </div>
+    {% elseif error == 'unknown' %}
+        <div class="alert alert-danger py-2"><i class="bi bi-x-octagon"></i> Réserve inconnue.</div>
+    {% endif %}
+
+    {# Le verdict, en une phrase, avant les chiffres. #}
+    <div class="verdict {{ counts.blocker > 0 ? 'verdict--bad' : (counts.blocking > 0 ? 'verdict--warn' : 'verdict--ok') }}">
+        <i class="bi bi-{{ counts.blocker > 0 ? 'exclamation-octagon-fill' : (counts.blocking > 0 ? 'exclamation-triangle-fill' : 'check-circle-fill') }}"></i>
+        <div>
+            <div class="verdict-line">
+                {% if counts.blocker > 0 %}
+                    Ne pas ouvrir le site au trafic payé.
+                {% elseif counts.blocking > 0 %}
+                    Ouverture possible, sous réserve.
+                {% else %}
+                    Aucune réserve ouverte.
+                {% endif %}
+            </div>
+            <div class="verdict-sub">
+                {% if counts.blocker > 0 %}
+                    {{ counts.blocker }} point{{ counts.blocker > 1 ? 's' : '' }} bloquant{{ counts.blocker > 1 ? 's' : '' }},
+                    {{ counts.warning }} à traiter, {{ counts.info }} décision{{ counts.info > 1 ? 's' : '' }} en attente.
+                    Un point bloquant expose à une sanction ou à du trafic acheté qui ne rapporte rien.
+                {% elseif counts.blocking > 0 %}
+                    {{ counts.warning }} point{{ counts.warning > 1 ? 's' : '' }} à traiter et
+                    {{ counts.info }} décision{{ counts.info > 1 ? 's' : '' }} en attente. Rien n'empêche
+                    l'ouverture, mais rien n'est réglé non plus.
+                {% else %}
+                    Les {{ counts.total }} points du catalogue sont soit vérifiés au vert, soit arbitrés.
+                {% endif %}
+            </div>
+        </div>
+        <div class="verdict-count">
+            <strong>{{ counts.blocking }}</strong>
+            <span>ouverte{{ counts.blocking > 1 ? 's' : '' }} sur {{ counts.total }}</span>
+        </div>
+    </div>
+
+    {% set open_items = report.items|filter(i => i.blocking) %}
+    {% set settled_items = report.items|filter(i => not i.blocking) %}
+
+    {% if open_items is not empty %}
+        <div class="section-title mt-4">
+            Réserves ouvertes <span class="hint">— {{ open_items|length }}, du plus grave au moins grave</span>
+        </div>
+        {% for item in open_items %}
+            {{ _self.item_row(item, statuses, severities) }}
+        {% endfor %}
+    {% endif %}
+
+    <details class="settled" {{ open_items is empty ? 'open' : '' }}>
+        <summary>
+            <i class="bi bi-chevron-right"></i>
+            {{ settled_items|length }} point{{ settled_items|length > 1 ? 's' : '' }} vérifié{{ settled_items|length > 1 ? 's' : '' }} au vert ou arbitré{{ settled_items|length > 1 ? 's' : '' }}
+            <span class="hint">— ce que le contrôle regarde, et ce qui a été décidé</span>
+        </summary>
+        <div class="settled-body">
+            {% for item in settled_items %}
+                {{ _self.item_row(item, statuses, severities) }}
+            {% endfor %}
+        </div>
+    </details>
+
+    <p class="screen-note mt-3">
+        Les <strong>contrôles automatiques</strong> se rejouent toutes les cinq minutes et se ferment
+        seuls quand la réalité change. Les <strong>points déclarés</strong> ne se ferment que par une
+        décision : elle est datée, signée et conservée. Une décision fait taire le bandeau, jamais le
+        constat — un contrôle encore au rouge reste affiché au rouge.
+    </p>
+{% endblock %}
+
+{#
+    Une réserve. La même mise en forme partout : l'œil apprend l'écran une fois.
+#}
+{% macro item_row(item, statuses, severities) %}
+    {% set tone = item.severity == 'blocker' ? 'bad' : (item.severity == 'warning' ? 'warn' : 'info') %}
+    <div class="reserve reserve--{{ tone }}{{ item.blocking ? '' : ' reserve--settled' }}" id="{{ item.key }}">
+        <div class="reserve-head">
+            <span class="flag flag--{{ tone }}">{{ severities[item.severity] }}</span>
+            <span class="reserve-area">{{ item.area }}</span>
+            <h2 class="reserve-title">{{ item.title }}</h2>
+            {% if item.auto %}
+                <span class="badge {{ item.open ? 'bg-danger' : 'bg-success' }}">
+                    <i class="bi bi-{{ item.open ? 'x-circle' : 'check-circle' }}"></i>
+                    contrôle {{ item.open ? 'au rouge' : 'au vert' }}
+                </span>
+            {% else %}
+                <span class="badge bg-secondary"><i class="bi bi-pin-angle"></i> déclaré</span>
+            {% endif %}
+            {% if item.link %}
+                <a class="btn btn-outline-secondary btn-xs ms-auto" href="{{ item.link }}">
+                    <i class="bi bi-box-arrow-up-right"></i> Ouvrir l'écran
+                </a>
+            {% endif %}
+        </div>
+
+        {% if item.detail %}
+            <p class="reserve-detail"><i class="bi bi-search"></i> {{ item.detail }}</p>
+        {% endif %}
+
+        <dl class="reserve-body">
+            <dt>Ce que ça coûte</dt><dd>{{ item.why }}</dd>
+            <dt>Ce qu'il faut faire</dt><dd>{{ item.action }}</dd>
+            <dt>Qui</dt><dd>{{ item.owner }}</dd>
+        </dl>
+
+        {% if item.ack %}
+            <p class="reserve-ack{{ item.contradicted ? ' reserve-ack--contradicted' : '' }}">
+                <i class="bi bi-{{ item.contradicted ? 'exclamation-diamond' : 'check2-circle' }}"></i>
+                <strong>{{ statuses[item.ack.status]|default(item.ack.status) }}</strong>
+                {% if item.ack.by %}par {{ item.ack.by }}{% endif %}
+                le {{ item.ack.at }}{% if item.ack.note %} — {{ item.ack.note }}{% endif %}
+                {% if item.contradicted %}
+                    <span class="reserve-ack-warn">Le contrôle voit toujours le problème.</span>
+                {% endif %}
+            </p>
+        {% endif %}
+
+        <details class="reserve-decide">
+            <summary>{{ item.ack ? 'Modifier la décision' : 'Décider' }}</summary>
+            <form method="post" action="/admin/readiness" class="reserve-form">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="key" value="{{ item.key }}">
+                <select class="form-select form-select-sm" name="status" aria-label="Statut">
+                    {% for value, label in statuses %}
+                        <option value="{{ value }}" {{ item.ack and item.ack.status == value ? 'selected' : '' }}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <input class="form-control form-control-sm" type="text" name="note" maxlength="500"
+                       placeholder="Note — obligatoire pour accepter un risque" aria-label="Note"
+                       value="{{ item.ack ? item.ack.note : '' }}">
+                <button class="btn btn-sm btn-primary" type="submit">Enregistrer</button>
+            </form>
+            <p class="reserve-hint">
+                « Traité » et « Risque accepté » retirent le point du bandeau. Le contrôle automatique,
+                lui, continue de dire ce qu'il voit.
+            </p>
+        </details>
+    </div>
+{% endmacro %}

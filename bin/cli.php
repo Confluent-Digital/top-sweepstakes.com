@@ -24,6 +24,7 @@ Commandes :
   drawing:run --pending                                 Concours clos en attente de tirage
   drawing:run --sweepstake=<id>                         Tire le finaliste d'un concours clos
   drawing:run --grand-prize [--year=YYYY]               Tire le gagnant de l'annee
+  readiness:check                                      Reevalue les reserves d'ouverture (code 1 si bloquant)
 
 TXT;
 
@@ -50,6 +51,7 @@ $registry = [
     'stats:rollup' => [App\Modules\Stats\Tasks\StatsRollupTask::class, 'run'],
     'gdpr:purge' => [App\Modules\Leads\Tasks\GdprPurgeTask::class, 'run'],
     'drawing:run' => [App\Modules\Drawings\Tasks\DrawingTask::class, 'run'],
+    'readiness:check' => [App\Modules\Admin\Tasks\ReadinessCheckTask::class, 'run'],
     // leads:verify attend le choix d'un fournisseur de verification.
 ];
 

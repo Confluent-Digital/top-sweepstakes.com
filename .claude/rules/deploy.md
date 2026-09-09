@@ -21,6 +21,21 @@ Branche principale : `main`. Une modification passe par une branche, une PR, une
    - formulaire ou texte de consentement → agent `compliance-us` ;
    - reste → agent `php-code-reviewer`.
 
+## Avant d'ouvrir le site au trafic
+
+`/admin/readiness` — **Réserves d'ouverture** — liste ce qui n'est pas fait : les contrôles
+automatiques (offre sans `idv`, concours publié sans règlement, page légale qui ne rend rien,
+CGU anglaises qui n'en sont pas, absence de mention CCPA) et les points déclarés dans
+`ReadinessCatalog` (règlement jamais relu par un juriste, lots du plan non développés).
+
+Le verdict de cet écran fait foi : **aucun budget d'acquisition tant qu'il reste une réserve
+bloquante non arbitrée**. Une réserve peut être fermée — « traité » ou « risque accepté » — mais
+la décision est datée, signée et journalisée dans `t_admin_log`, et un contrôle automatique
+encore au rouge reste affiché au rouge.
+
+Un point ouvert que le code pourrait constater n'a rien à faire dans `ReadinessCatalog` :
+il devient un contrôle dans `ReadinessService`.
+
 ## Après la mise en production
 
 1. `curl -s https://top-sweepstakes.com/health` → `status: ok` **et** `database: ok`.

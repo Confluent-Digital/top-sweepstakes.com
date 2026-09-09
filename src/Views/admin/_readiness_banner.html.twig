@@ -1,0 +1,26 @@
+{#
+    Bandeau des reserves d'ouverture, affiche sur chaque ecran du back-office.
+
+    Il ne detaille rien : il dit combien de points bloquent et ouvre l'ecran qui
+    les liste. Detailler ici reproduirait l'ecran sur toutes les pages et
+    finirait par ne plus etre lu.
+
+    `readiness` vaut null si le calcul a echoue — l'absence de bandeau ne doit
+    alors pas se lire comme « tout va bien ».
+#}
+{% if readiness is not null and readiness.blocking > 0 %}
+    <div class="readiness-bar {{ readiness.blocker > 0 ? 'readiness-bar--bad' : 'readiness-bar--warn' }}">
+        <i class="bi bi-{{ readiness.blocker > 0 ? 'exclamation-octagon-fill' : 'exclamation-triangle-fill' }}"></i>
+        <span>
+            {% if readiness.blocker > 0 %}
+                <strong>{{ readiness.blocker }} réserve{{ readiness.blocker > 1 ? 's' : '' }} bloquante{{ readiness.blocker > 1 ? 's' : '' }}</strong>
+                — ne pas ouvrir le site au trafic payé en l'état.
+            {% else %}
+                <strong>{{ readiness.blocking }} réserve{{ readiness.blocking > 1 ? 's' : '' }} ouverte{{ readiness.blocking > 1 ? 's' : '' }}</strong>
+                — rien ne bloque, mais rien n'est réglé non plus.
+            {% endif %}
+        </span>
+        <a class="btn btn-sm {{ readiness.blocker > 0 ? 'btn-danger' : 'btn-warning' }} ms-auto"
+           href="/admin/readiness">Voir le détail</a>
+    </div>
+{% endif %}

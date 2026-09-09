@@ -56,6 +56,48 @@ final class SettingRepository
     {
     }
 
+    /**
+     * Pages legales affichees en pied de page, telles qu'enregistrees.
+     *
+     * @return array<string,string> page => libelle affiche
+     */
+    public function legalLinks(): array
+    {
+        return self::decodeLegalLinks((string) ($this->all()['site_legal_links'] ?? ''));
+    }
+
+    /**
+     * SOURCE UNIQUE du decodage de `site_legal_links`.
+     *
+     * Trois endroits en avaient besoin — le formulaire de reglages, le contexte
+     * des gabarits publics et le controle d'ouverture — et chacun s'etait ecrit
+     * sa propre boucle. Trois lectures d'un meme JSON finissent par diverger
+     * sur un cas limite, et celui-ci decide de ce qu'un participant peut lire
+     * avant de consentir.
+     *
+     * Statique et prenant la chaine brute : le formulaire doit pouvoir decoder
+     * ce que l'operateur VIENT de soumettre, pas ce qui est en base. Sinon une
+     * erreur de saisie sur un autre champ lui reafficherait l'ancienne
+     * selection et lui ferait perdre la sienne.
+     *
+     * @return array<string,string> page => libelle affiche
+     */
+    public static function decodeLegalLinks(string $raw): array
+    {
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $links = [];
+        foreach ($decoded as $link) {
+            if (is_array($link) && isset($link['page'])) {
+                $links[(string) $link['page']] = (string) ($link['label'] ?? $link['page']);
+            }
+        }
+        return $links;
+    }
+
     /** @return array<string,string> */
     public function all(): array
     {

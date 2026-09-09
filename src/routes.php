@@ -8,9 +8,11 @@ use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
 use App\Modules\Admin\Controllers\OfferAdminController;
+use App\Modules\Admin\Controllers\ReadinessController;
 use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
+use App\Modules\Admin\Middleware\ReadinessContextMiddleware;
 use App\Modules\Drawings\Controllers\DrawingAdminController;
 use App\Modules\Stats\Controllers\StatsController;
 use App\Modules\Legal\Controllers\ComplianceController;
@@ -78,6 +80,11 @@ $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void 
 
     $admin->map(['GET', 'POST'], '/settings', SettingController::class . ':edit');
 
+    // Reserves d'ouverture : ce qui n'est pas fait et ce qui a ete decide a son
+    // sujet. Ecran de lecture, plus un POST par decision.
+    $admin->get('/readiness', ReadinessController::class . ':index');
+    $admin->post('/readiness', ReadinessController::class . ':decide');
+
     $admin->get('/drawings', DrawingAdminController::class . ':index');
     $admin->get('/drawings/{id:[0-9]+}', DrawingAdminController::class . ':show');
     $admin->post('/drawings/sweepstake/{id:[0-9]+}', DrawingAdminController::class . ':runSweepstake');
@@ -90,6 +97,11 @@ $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void 
     $admin->get('/stats/offers', StatsController::class . ':offers');
     $admin->get('/stats/sources', StatsController::class . ':sources');
 })
+    // L'ordre compte : le dernier ajoute est le plus externe. L'authentification
+    // s'execute donc en premier, et le contexte des reserves en dernier — il a
+    // besoin de l'utilisateur pose par AdminAuthMiddleware pour ne rien exposer
+    // sur la page de connexion.
+    ->add(ReadinessContextMiddleware::class)
     ->add(CsrfMiddleware::class)
     ->add(AdminAuthMiddleware::class);
 

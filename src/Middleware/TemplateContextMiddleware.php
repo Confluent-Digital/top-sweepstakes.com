@@ -44,32 +44,15 @@ final class TemplateContextMiddleware implements MiddlewareInterface
         // Decode ici plutot que dans le gabarit : Twig n'a pas de filtre
         // json_decode, et en ajouter un pour un seul usage compliquerait la
         // lecture des vues pour rien.
-        $environment->addGlobal('legal_links', $this->decodeLinks($settings['site_legal_links'] ?? ''));
+        // Le decodage vit dans SettingRepository : c'est la meme liste que
+        // lisent le formulaire de reglages et le controle d'ouverture.
+        $links = [];
+        $decoded = SettingRepository::decodeLegalLinks((string) ($settings['site_legal_links'] ?? ''));
+        foreach ($decoded as $page => $label) {
+            $links[] = ['page' => $page, 'label' => $label];
+        }
+        $environment->addGlobal('legal_links', $links);
 
         return $handler->handle($request);
-    }
-
-    /**
-     * @return list<array{page: string, label: string}>
-     */
-    private function decodeLinks(string $raw): array
-    {
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        $links = [];
-        foreach ($decoded as $link) {
-            if (!is_array($link) || !isset($link['page'])) {
-                continue;
-            }
-            $page = (string) $link['page'];
-            $links[] = [
-                'page' => $page,
-                'label' => (string) ($link['label'] ?? $page),
-            ];
-        }
-        return $links;
     }
 }

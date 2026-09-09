@@ -15,15 +15,20 @@ use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
 use App\Modules\Admin\Controllers\OfferAdminController;
+use App\Modules\Admin\Controllers\ReadinessController;
 use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
+use App\Modules\Admin\Middleware\ReadinessContextMiddleware;
 use App\Modules\Admin\Models\Repositories\AdminLeadRepository;
 use App\Modules\Admin\Models\Repositories\AdminOfferRepository;
 use App\Modules\Admin\Models\Repositories\AdminSweepstakeRepository;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
+use App\Modules\Admin\Models\Repositories\ReadinessRepository;
 use App\Modules\Admin\Models\Repositories\SettingRepository;
 use App\Modules\Admin\Services\ImageUploadService;
+use App\Modules\Admin\Services\ReadinessService;
+use App\Modules\Admin\Tasks\ReadinessCheckTask;
 use App\Modules\Leads\Models\Repositories\ConsentRepository;
 use App\Modules\Leads\Models\Repositories\LeadRepository;
 use App\Modules\Leads\Models\Repositories\SuppressionRepository;
@@ -215,6 +220,34 @@ $container->set(LeadAdminController::class, fn(Container $c) => new LeadAdminCon
     $c->get(LeadRepository::class),
     $c->get(ConsentRepository::class),
     $c->get(AdminUserRepository::class),
+));
+
+// Reserves d'ouverture : ce qui n'est pas fait, affiche sur chaque ecran du
+// back-office plutot que garde dans un compte rendu que personne ne relit.
+$container->set(ReadinessRepository::class, fn(Container $c) => new ReadinessRepository($c->get(Database::class)));
+$container->set(ReadinessService::class, fn(Container $c) => new ReadinessService(
+    $c->get(Config::class),
+    $c->get(SettingRepository::class),
+    $c->get(LegalContentService::class),
+    $c->get(ReadinessRepository::class),
+    $c->get(DrawingRepository::class),
+    $rootDir . '/cache/readiness/checks.json',
+    $c->get(LoggerInterface::class),
+));
+$container->set(ReadinessCheckTask::class, fn(Container $c) => new ReadinessCheckTask(
+    $c->get(ReadinessService::class),
+    $c->get(LoggerInterface::class),
+));
+$container->set(ReadinessController::class, fn(Container $c) => new ReadinessController(
+    $c->get(Twig::class),
+    $c->get(ReadinessService::class),
+    $c->get(ReadinessRepository::class),
+    $c->get(AdminUserRepository::class),
+));
+$container->set(ReadinessContextMiddleware::class, fn(Container $c) => new ReadinessContextMiddleware(
+    $c->get(Twig::class),
+    $c->get(ReadinessService::class),
+    $c->get(LoggerInterface::class),
 ));
 
 $container->set(LegalContentService::class, fn(Container $c) => new LegalContentService(

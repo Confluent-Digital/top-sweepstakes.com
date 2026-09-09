@@ -1177,12 +1177,153 @@ body.auth main { flex: 1 0 auto; display: flex; align-items: center; justify-con
 }
 .swatch-row { display: flex; align-items: center; gap: var(--ts-sp-2); }
 
+
+/* ------------------------------------------------------------------ Reserves
+   d'ouverture. Le bandeau suit l'exploitant sur tous les ecrans ; l'ecran
+   dedie donne le verdict avant la liste. Volontairement plus aere que le reste
+   du back-office : on y lit des phrases, pas des chiffres. */
+
+.readiness-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--ts-sp-2);
+    padding: .5rem .75rem;
+    margin-bottom: var(--ts-sp-3);
+    border: 1px solid;
+    border-radius: var(--ts-radius);
+    font-size: var(--ts-fs-sm);
+}
+.readiness-bar .bi:first-child { font-size: 1.05rem; flex: 0 0 auto; }
+.readiness-bar--bad  { color: var(--ts-bad-fg);  background: var(--ts-bad-bg);  border-color: var(--ts-bad-line); }
+.readiness-bar--warn { color: var(--ts-warn-fg); background: var(--ts-warn-bg); border-color: var(--ts-warn-line); }
+
+.verdict {
+    display: flex;
+    align-items: center;
+    gap: var(--ts-sp-3);
+    padding: var(--ts-sp-4);
+    border: 1px solid;
+    border-radius: var(--ts-radius);
+    background: var(--ts-surface);
+}
+.verdict > .bi { font-size: 1.75rem; flex: 0 0 auto; }
+.verdict--bad  { border-color: var(--ts-bad-line);  color: var(--ts-bad-fg);  background: var(--ts-bad-bg); }
+.verdict--warn { border-color: var(--ts-warn-line); color: var(--ts-warn-fg); background: var(--ts-warn-bg); }
+.verdict--ok   { border-color: var(--ts-ok-line);   color: var(--ts-ok-fg);   background: var(--ts-ok-bg); }
+.verdict-line { font-size: var(--ts-fs-lg); font-weight: 700; }
+.verdict-sub  { font-size: var(--ts-fs-sm); opacity: .9; margin-top: .15rem; }
+.verdict-count { margin-left: auto; text-align: right; line-height: 1.1; white-space: nowrap; }
+.verdict-count strong { display: block; font-size: var(--ts-fs-xl); font-variant-numeric: tabular-nums; }
+.verdict-count span { font-size: var(--ts-fs-micro); text-transform: uppercase; letter-spacing: .04em; }
+
+.reserve {
+    background: var(--ts-surface);
+    border: 1px solid var(--ts-line);
+    border-left: 3px solid var(--ts-line-strong);
+    border-radius: var(--ts-radius);
+    padding: var(--ts-sp-3);
+    margin-bottom: var(--ts-sp-2);
+    box-shadow: var(--ts-shadow);
+}
+.reserve--bad  { border-left-color: var(--ts-bad-fg); }
+.reserve--warn { border-left-color: var(--ts-warn-fg); }
+.reserve--info { border-left-color: var(--ts-info-fg); }
+/* Un point regle reste lisible mais cesse d'attirer l'oeil. */
+.reserve--settled { box-shadow: none; background: var(--ts-surface-alt); }
+
+.reserve-head { display: flex; align-items: center; gap: var(--ts-sp-2); flex-wrap: wrap; }
+.reserve-area {
+    font-size: var(--ts-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ts-text-muted);
+}
+.reserve-title {
+    font-size: var(--ts-fs-md);
+    font-weight: 650;
+    color: var(--ts-text-strong);
+    margin: 0;
+    flex: 1 1 18rem;
+}
+
+/* Ce que le controle a VU. C'est la ligne la plus utile de la fiche : elle
+   nomme l'offre, le concours ou la page en cause. */
+.reserve-detail {
+    margin: var(--ts-sp-2) 0 0;
+    padding: .35rem .5rem;
+    background: var(--ts-code-bg);
+    border-radius: var(--ts-radius-sm);
+    font-family: var(--ts-mono);
+    font-size: var(--ts-fs-sm);
+    color: var(--ts-text);
+}
+
+.reserve-body { display: grid; grid-template-columns: 9rem 1fr; gap: .1rem var(--ts-sp-3); margin: var(--ts-sp-2) 0 0; }
+.reserve-body dt {
+    font-size: var(--ts-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ts-text-muted);
+    font-weight: 600;
+    padding-top: .12rem;
+}
+.reserve-body dd { margin: 0 0 .3rem; font-size: var(--ts-fs-sm); }
+
+.reserve-ack {
+    margin: var(--ts-sp-2) 0 0;
+    padding: .35rem .5rem;
+    border-radius: var(--ts-radius-sm);
+    font-size: var(--ts-fs-sm);
+    color: var(--ts-ok-fg);
+    background: var(--ts-ok-bg);
+    border: 1px solid var(--ts-ok-line);
+}
+/* Quelqu'un a signe, le controle voit toujours le probleme : les deux doivent
+   rester visibles cote a cote. */
+.reserve-ack--contradicted { color: var(--ts-warn-fg); background: var(--ts-warn-bg); border-color: var(--ts-warn-line); }
+.reserve-ack-warn { font-weight: 700; margin-left: .35rem; }
+
+.reserve-decide { margin-top: var(--ts-sp-2); }
+.reserve-decide > summary {
+    cursor: pointer;
+    font-size: var(--ts-fs-xs);
+    color: var(--ts-accent-text);
+    width: max-content;
+}
+.reserve-form { display: flex; gap: var(--ts-sp-2); align-items: center; flex-wrap: wrap; margin-top: var(--ts-sp-2); }
+.reserve-form .form-select { width: 11rem; flex: 0 0 auto; }
+.reserve-form .form-control { flex: 1 1 18rem; }
+.reserve-hint { font-size: var(--ts-fs-micro); color: var(--ts-text-muted); margin: .35rem 0 0; }
+
+.settled { margin-top: var(--ts-sp-4); }
+.settled > summary {
+    cursor: pointer;
+    font-size: var(--ts-fs-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 600;
+    color: var(--ts-text-muted);
+    padding: var(--ts-sp-2) 0;
+}
+.settled > summary .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* Le chevron du gabarit remplace celui du navigateur : deux marqueurs cote a
+   cote se lisent comme un defaut d'affichage. */
+.settled > summary { list-style: none; }
+.settled > summary::-webkit-details-marker { display: none; }
+.settled[open] > summary .bi { transform: rotate(90deg); }
+.settled > summary .bi { display: inline-block; transition: transform .12s ease; }
+.settled-body { padding-top: var(--ts-sp-2); }
+
 @media (max-width: 991.98px) {
     .navbar-main .navbar-nav { align-items: stretch; gap: 0; }
     .navbar-main .nav-link { padding: .5rem .6rem; }
     .nav-sep { display: none; }
     .page-head { align-items: flex-start; }
     .record .k, .proof-meta .k { flex-basis: 7rem; }
+    .reserve-body { grid-template-columns: 1fr; gap: 0; }
+    .reserve-body dt { padding-top: var(--ts-sp-2); }
+    .verdict { flex-wrap: wrap; }
+    .verdict-count { margin-left: 0; text-align: left; }
 }
 
 @media (prefers-reduced-motion: reduce) {

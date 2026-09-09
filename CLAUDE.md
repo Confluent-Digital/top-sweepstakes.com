@@ -88,6 +88,10 @@ SQLyog se connecte à MariaDB par tunnel SSH sur le port 3332.
 - Commits : conventional commits, message **en français** (`feat(offers): ...`, `fix(tracking): ...`).
   Le scope reprend le domaine touché (`sweepstakes`, `offers`, `tracking`, `stats`, `admin`, `legal`).
 - Commentaires et logs en français. Identifiants de code et de base en anglais.
+- **Ce qui n'est pas fait se déclare.** Une dette connue qui ne vit que dans une conversation est
+  oubliée au moment où elle coûte cher. Elle se déclare dans `ReadinessCatalog` — ou, si le code
+  peut la constater, devient un contrôle de `ReadinessService`. Les deux s'affichent dans
+  `/admin/readiness` et dans le bandeau du back-office.
 - **Aucun secret dans le code.** Identifiants de régie, clés d'API et mots de passe vivent dans
   `.env`. C'est la faute la plus fréquente de `meilleursconcours.com`
   (`app/Modules/Stats/Tasks/PlateformeTask.php:83` : login et mot de passe de la régie en clair).

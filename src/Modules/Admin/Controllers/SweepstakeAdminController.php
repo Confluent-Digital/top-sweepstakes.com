@@ -11,6 +11,7 @@ use App\Modules\Admin\Services\ImageUploadService;
 use App\Modules\Leads\Services\LeadValidator;
 use App\Modules\Leads\Services\UsStates;
 use App\Modules\Sweepstakes\Models\Repositories\SweepstakeRepository;
+use App\Modules\Sweepstakes\Services\OfficialRules;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\UploadedFileInterface;
@@ -333,9 +334,10 @@ final class SweepstakeAdminController
     {
         $errors = [];
 
-        $rules = trim(strip_tags((string) $data['sweepstake_official_rules_html']));
+        $html = (string) $data['sweepstake_official_rules_html'];
+        $rules = OfficialRules::text($html);
 
-        if ($rules === '') {
+        if (OfficialRules::isEmpty($html)) {
             $errors['sweepstake_official_rules_html'] =
                 'Les Official Rules sont obligatoires pour publier un concours.';
         } else {
@@ -343,7 +345,7 @@ final class SweepstakeAdminController
             // ont ete publiees sans que rien ne le signale. Un reglement
             // complet fait plusieurs milliers de caracteres ; ce seuil ecarte
             // un fragment sans jamais atteindre un texte reel.
-            if (mb_strlen($rules) < 1500) {
+            if (OfficialRules::isTooShort($html)) {
                 $errors['sweepstake_official_rules_html'] = sprintf(
                     'Les Official Rules paraissent incompletes (%d caracteres de texte). '
                     . 'Un reglement complet porte au minimum : NO PURCHASE NECESSARY, l\'AMOE, '
@@ -352,20 +354,9 @@ final class SweepstakeAdminController
                     mb_strlen($rules)
                 );
             } else {
-                // Les mentions dont l'absence est la plus couteuse, et les plus
-                // faciles a perdre dans un copier-coller tronque.
-                $missing = [];
-                foreach (
-                    [
-                    'NO PURCHASE NECESSARY' => 'no purchase necessary',
-                    'la methode alternative d\'entree (AMOE)' => 'alternate method of entry',
-                    'les probabilites de gain' => 'odds of winning',
-                    ] as $label => $needle
-                ) {
-                    if (stripos($rules, $needle) === false) {
-                        $missing[] = $label;
-                    }
-                }
+                // Meme liste que le controle des concours deja en ligne : voir
+                // OfficialRules::REQUIRED_MENTIONS.
+                $missing = OfficialRules::missingMentions($html);
                 if ($missing !== []) {
                     $errors['sweepstake_official_rules_html'] =
                         'Mention(s) obligatoire(s) introuvable(s) dans les Official Rules : '

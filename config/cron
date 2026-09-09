@@ -24,6 +24,19 @@ TSW=/data/www/top-sweepstakes.com
 # Verification email / telephone — a activer au lot 3.
 # */5 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php leads:verify >> logs/tasks/leads-verify.log 2>&1
 
+# Reserves d'ouverture — reevaluation toutes les 5 minutes.
+#
+# Elle ne fait que tenir le cache chaud : sans elle, le premier operateur a
+# ouvrir le back-office apres l'expiration du cache paie les appels au service
+# de contenus juridiques. La periode doit rester INFERIEURE au TTL du cache
+# (dix minutes, ReadinessService::CACHE_TTL) : au-dela, le cache expire entre
+# deux passages et l'operateur paie le recalcul une fois sur deux — y compris
+# sur un POST de formulaire, le middleware etant pose sur tout /admin.
+#
+# La commande sort en code 1 tant qu'une reserve BLOQUANTE reste ouverte, ce qui
+# en fait aussi une sonde de deploiement.
+*/5 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php readiness:check >> logs/tasks/readiness-check.log 2>&1
+
 # ⚠️ AUCUN TIRAGE N'EST AUTOMATISE, et ce n'est pas un oubli.
 #
 # Un cron qui tirerait les concours clos chaque nuit designerait des gagnants

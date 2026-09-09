@@ -7,6 +7,7 @@ namespace App\Modules\Admin\Controllers;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
 use App\Modules\Admin\Models\Repositories\SettingRepository;
 use App\Modules\Admin\Services\ImageUploadService;
+use App\Modules\Admin\Services\ReadinessCatalog;
 use App\Modules\Legal\Services\LegalContentService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -83,21 +84,23 @@ final class SettingController
             $values = $submitted + $values;
         }
 
+        // Ce que l'operateur vient de soumettre, pas ce qui est en base : une
+        // erreur sur un autre champ ne doit pas lui faire perdre sa selection.
+        $selectedLinks = SettingRepository::decodeLegalLinks((string) ($values['site_legal_links'] ?? ''));
+
         return $this->view->render($response, 'admin/settings.html.twig', [
             'values' => $values,
             'errors' => $errors,
             'saved' => $request->getQueryParams()['saved'] ?? null,
             'legal_pages' => LegalContentService::PAGES,
-            'legal_selected' => $this->decodeLegalLinks($values['site_legal_links'] ?? ''),
+            'legal_selected' => $selectedLinks,
             // Testé pour de vrai : la couverture de legals varie par langue, et
             // une page absente y répond 200 avec un avertissement PHP.
             'legal_availability' => $this->legal->availability(),
             // Un document cite dans un texte de consentement mais absent du
             // pied de page : le participant a accepte quelque chose qu'il ne
             // pouvait pas lire.
-            'legal_cited_missing' => $this->citedButNotLinked(
-                $this->decodeLegalLinks($values['site_legal_links'] ?? '')
-            ),
+            'legal_cited_missing' => $this->citedButNotLinked($selectedLinks),
         ]);
     }
 
@@ -110,18 +113,17 @@ final class SettingController
      * libelle — parce que le seul cas qui compte est celui d'un document retire
      * du pied de page alors qu'il reste cite.
      *
+     * La liste des documents cites vient de `ReadinessCatalog` : l'ecran des
+     * reserves d'ouverture porte le meme controle, et deux copies d'une liste
+     * de conformite finissent toujours par diverger.
+     *
      * @param array<string,string> $linked
      * @return list<string>
      */
     private function citedButNotLinked(array $linked): array
     {
-        $cited = [
-            'Terms of Service' => 'terms',
-            'Privacy Policy' => 'privacy',
-        ];
-
         $missing = [];
-        foreach ($cited as $label => $page) {
+        foreach (ReadinessCatalog::citedDocuments() as $label => $page) {
             if (!array_key_exists($page, $linked)) {
                 $missing[] = $label;
             }
@@ -148,23 +150,6 @@ final class SettingController
         }
 
         return json_encode($links, JSON_UNESCAPED_UNICODE) ?: '[]';
-    }
-
-    /** @return array<string,string> page => libelle */
-    private function decodeLegalLinks(string $raw): array
-    {
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        $links = [];
-        foreach ($decoded as $link) {
-            if (is_array($link) && isset($link['page'])) {
-                $links[(string) $link['page']] = (string) ($link['label'] ?? $link['page']);
-            }
-        }
-        return $links;
     }
 
     /**
