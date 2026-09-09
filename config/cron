@@ -24,5 +24,7 @@ TSW=/data/www/top-sweepstakes.com
 # Verification email / telephone — a activer au lot 3.
 # */5 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php leads:verify >> logs/tasks/leads-verify.log 2>&1
 
-# Purge RGPD — a activer au lot 3.
-# 30 3 * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php gdpr:purge >> logs/tasks/gdpr-purge.log 2>&1
+# Purge RGPD — anonymisation au-dela des durees de conservation et traitement
+# des demandes d'effacement. Une fois par jour suffit ; les demandes explicites
+# doivent etre honorees sous les delais legaux, pas dans la minute.
+30 3 * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php gdpr:purge >> logs/tasks/gdpr-purge.log 2>&1

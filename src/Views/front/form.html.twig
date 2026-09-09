@@ -54,11 +54,15 @@
                 </fieldset>
             {% endif %}
 
-            {# Piege a robots : un champ invisible qu'un humain ne remplit jamais. #}
+            {# Piege a robots : un champ invisible qu'un humain ne remplit jamais,
+               et l'heure d'ouverture du formulaire. Les deux sont verifies cote
+               serveur par SpamGuard — un piege qu'on ne relit pas ne sert a rien. #}
             <div class="hp" aria-hidden="true">
-                <label for="website">Leave this field empty</label>
-                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+                <label for="{{ honeypot_field }}">Leave this field empty</label>
+                <input type="text" id="{{ honeypot_field }}" name="{{ honeypot_field }}"
+                       tabindex="-1" autocomplete="off">
             </div>
+            <input type="hidden" name="{{ timestamp_field }}" value="{{ form_opened_at }}">
 
             <button type="submit" class="btn btn-primary btn-lg btn-block">
                 {% if step < total_steps %}Continue{% else %}Complete my entry{% endif %}

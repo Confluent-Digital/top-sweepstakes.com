@@ -48,6 +48,12 @@ n'existe pas.
 **Modifier un texte de consentement ne modifie jamais les lignes déjà écrites.** Un nouveau texte
 produit de nouvelles lignes, c'est tout.
 
+La seule écriture autorisée sur cette table en dehors de l'insertion est la **suppression par
+`gdpr:purge`**, en même temps que l'anonymisation du participant. Garder la preuve après avoir
+anonymisé la fiche reviendrait à conserver l'IP, le user agent et l'URL — précisément ce qu'on
+vient d'effacer — dans une autre table, en croyant s'en être débarrassé. La preuve n'est donc
+disponible que tant que le participant l'est.
+
 ## TCPA
 
 Si le téléphone est collecté à des fins d'appel ou de SMS, le consentement doit être :
@@ -83,7 +89,7 @@ créer dans le dépôt `legals.confluent-digital.com` — travail éditorial et 
 | Donnée | Durée | Mise en œuvre |
 |---|---|---|
 | Participant actif | 36 mois après la dernière participation | `gdpr:purge` anonymise |
-| Preuve de consentement | même durée que le participant | purgée avec lui |
+| Preuve de consentement | même durée que le participant | **supprimée** avec lui par `gdpr:purge` |
 | Événements display | 25 mois | agrégats conservés, événementiel purgé |
 | Liste de suppression | sans limite | c'est son objet : ne jamais réémettre vers cet e-mail |
 

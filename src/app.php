@@ -26,6 +26,8 @@ use App\Modules\Leads\Models\Repositories\SuppressionRepository;
 use App\Modules\Leads\Services\ConsentCatalog;
 use App\Modules\Leads\Services\ConsentRecorder;
 use App\Modules\Leads\Services\LeadValidator;
+use App\Modules\Leads\Services\SpamGuard;
+use App\Modules\Leads\Tasks\GdprPurgeTask;
 use App\Modules\Legal\Controllers\ComplianceController;
 use App\Modules\Legal\Services\LegalContentService;
 use App\Modules\Offers\Models\Repositories\OfferRepository;
@@ -97,6 +99,11 @@ $container->set(PlatformReportTask::class, fn(Container $c) => new PlatformRepor
     $c->get(PlatformReportRepository::class),
     $c->get(LoggerInterface::class),
 ));
+$container->set(GdprPurgeTask::class, fn(Container $c) => new GdprPurgeTask(
+    $c->get(Database::class),
+    $c->get(StatsRepository::class),
+    $c->get(LoggerInterface::class),
+));
 $container->set(StatsRollupTask::class, fn(Container $c) => new StatsRollupTask(
     $c->get(StatsRepository::class),
     $c->get(PlatformReportRepository::class),
@@ -109,6 +116,7 @@ $container->set(StatsRollupTask::class, fn(Container $c) => new StatsRollupTask(
 $container->set(DeviceDetector::class, fn() => new DeviceDetector());
 $container->set(TargetingService::class, fn() => new TargetingService());
 $container->set(LeadValidator::class, fn() => new LeadValidator());
+$container->set(SpamGuard::class, fn() => new SpamGuard());
 $container->set(ConsentCatalog::class, fn(Container $c) => new ConsentCatalog($c->get(Config::class)));
 $container->set(ConsentRecorder::class, fn(Container $c) => new ConsentRecorder($c->get(ConsentRepository::class)));
 $container->set(OfferSelector::class, fn(Container $c) => new OfferSelector($c->get(TargetingService::class)));

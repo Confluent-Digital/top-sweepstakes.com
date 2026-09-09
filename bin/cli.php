@@ -19,7 +19,7 @@ Commandes :
   platform:report [--from=YYYY-MM-DD --to=YYYY-MM-DD]  Tire le flux de reporting de la regie (revenus)
   stats:rollup [--date=YYYY-MM-DD]                     Agrege les evenements display et recalcule les eCPM
   leads:verify [--limit=200]                           Verifie email / telephone des participants recents
-  gdpr:purge                                           Anonymise selon la duree de retention
+  gdpr:purge [--dry-run]                               Anonymise selon la duree de retention
   admin:create --email= --password= [--name= --role=]  Cree un compte de back-office
 
 TXT;
@@ -45,7 +45,8 @@ $registry = [
     'admin:create' => [App\Modules\Admin\Tasks\CreateAdminUserTask::class, 'run'],
     'platform:report' => [App\Modules\Platform\Tasks\PlatformReportTask::class, 'run'],
     'stats:rollup' => [App\Modules\Stats\Tasks\StatsRollupTask::class, 'run'],
-    // leads:verify et gdpr:purge arrivent avec le lot suivant.
+    'gdpr:purge' => [App\Modules\Leads\Tasks\GdprPurgeTask::class, 'run'],
+    // leads:verify attend le choix d'un fournisseur de verification.
 ];
 
 if (!isset($registry[$command])) {

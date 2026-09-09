@@ -9,12 +9,14 @@ use App\Modules\Leads\Models\Repositories\SuppressionRepository;
 use App\Modules\Leads\Services\ConsentCatalog;
 use App\Modules\Leads\Services\ConsentRecorder;
 use App\Modules\Leads\Services\LeadValidator;
+use App\Modules\Leads\Services\SpamGuard;
 use App\Modules\Leads\Services\UsStates;
 use App\Modules\Offers\Services\OfferDisplayService;
 use App\Modules\Sweepstakes\Models\Repositories\SweepstakeRepository;
 use App\Modules\Sweepstakes\Services\VisitorContext;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Log\LoggerInterface;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Views\Twig;
 
@@ -35,6 +37,8 @@ final class SweepstakeController
         private LeadValidator $validator,
         private ConsentCatalog $consents,
         private ConsentRecorder $recorder,
+        private SpamGuard $spamGuard,
+        private LoggerInterface $logger,
         private OfferDisplayService $offers,
         private VisitorContext $visitor,
     ) {
@@ -126,6 +130,22 @@ final class SweepstakeController
                     return $this->redirect($response, '/' . $slug . '/details');
                 }
 
+                // Le filtre anti-robot s'applique a la derniere etape, la ou le
+                // participant serait enregistre. Un rejet ne dit PAS pourquoi :
+                // l'ecran de remerciement est servi comme pour une vraie
+                // participation, faute de quoi on apprendrait a un robot
+                // comment passer.
+                $rejection = $this->spamGuard->reject($input, $this->visitor->lead($sweepstakeId));
+                if ($rejection !== null) {
+                    $this->logger->info('Participation ecartee', [
+                        'raison' => $rejection,
+                        'sweepstake' => $sweepstakeId,
+                        'ip' => $this->clientIp($request),
+                    ]);
+                    $this->visitor->forgetLead($sweepstakeId);
+                    return $this->redirect($response, '/' . $slug . '/thank-you');
+                }
+
                 return $this->completeEntry($request, $response, $sweepstake, $presented, $input, $slug);
             }
 
@@ -143,6 +163,9 @@ final class SweepstakeController
             'consents' => $presented,
             'states' => UsStates::all(),
             'action' => '/' . $slug . ($step === 1 ? '/entry' : '/details'),
+            'honeypot_field' => SpamGuard::HONEYPOT_FIELD,
+            'timestamp_field' => SpamGuard::TIMESTAMP_FIELD,
+            'form_opened_at' => time(),
         ]);
     }
 
