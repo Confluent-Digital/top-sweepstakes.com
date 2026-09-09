@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <title>{% block title %}{{ site.site_name|default(app_name) }}{% endblock %}</title>
     <meta name="description" content="{% block description %}{% endblock %}">
     <meta name="theme-color" content="{{ theme.primary|default('#1b4dff') }}">
     {# Trafic payé : le tunnel n'a pas vocation à être indexé. #}
@@ -24,11 +24,15 @@
             --font-family: {{ theme.font|default('system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif')|raw }};
         }
     </style>
+    {% if site.site_favicon|default('') %}
+        <link rel="icon" href="/img/site/{{ site.site_favicon }}">
+        <link rel="apple-touch-icon" href="/img/site/{{ site.site_favicon }}">
+    {% endif %}
     <link rel="stylesheet" href="/dist/css/front.css">
 </head>
 <body>
 <header class="site-header">
-    <a class="site-logo" href="/">{{ app_name }}</a>
+    <a class="site-logo" href="/">{{ site.site_name|default(app_name) }}</a>
     <span class="site-badge">
         {% include 'front/partials/icon.html.twig' with {'name': 'lock', 'size': 14} only %}
         Secure &amp; encrypted
@@ -52,10 +56,19 @@
         <a href="/unsubscribe">Unsubscribe</a>
     </nav>
 
-    {# CAN-SPAM : adresse postale physique de l'annonceur. #}
+    {#
+        CAN-SPAM : adresse postale physique, sur CHAQUE page.
+        Celle du sponsor sur les pages d'un concours, celle du site partout
+        ailleurs — sans ce repli, /unsubscribe n'en affichait aucune, alors que
+        c'est précisément la page d'atterrissage d'un lien de désinscription.
+    #}
     {% if sweepstake is defined and sweepstake and sweepstake.sweepstake_sponsor_address %}
         <p class="footer-address">
             {{ sweepstake.sweepstake_sponsor_name }} — {{ sweepstake.sweepstake_sponsor_address }}
+        </p>
+    {% elseif site.site_postal_address|default('') %}
+        <p class="footer-address">
+            {{ site.site_company_name|default(site.site_name) }} — {{ site.site_postal_address }}
         </p>
     {% endif %}
 
@@ -63,7 +76,7 @@
         <p class="footer-disclaimer">{{ sweepstake.sweepstake_brand_disclaimer }}</p>
     {% endif %}
 
-    <p>&copy; {{ "now"|date("Y") }} {{ app_name }}. All rights reserved.</p>
+    <p>&copy; {{ "now"|date("Y") }} {{ site.site_name|default(app_name) }}. All rights reserved.</p>
 </footer>
 {% block scripts %}{% endblock %}
 </body>

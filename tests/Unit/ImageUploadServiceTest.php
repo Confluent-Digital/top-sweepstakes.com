@@ -56,11 +56,46 @@ final class ImageUploadServiceTest extends TestCase
         return $binary;
     }
 
+    /** Photo : dégradé et formes, ce que compresse bien le JPEG et mieux le WebP. */
+    private function photo(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        for ($y = 0; $y < $height; $y++) {
+            $c = imagecolorallocate($image, (int) (30 + $y / $height * 150), 80, 200);
+            imageline($image, 0, $y, $width, $y, $c);
+        }
+        for ($i = 0; $i < 12; $i++) {
+            imagefilledellipse(
+                $image,
+                random_int(0, $width),
+                random_int(0, $height),
+                random_int(20, 120),
+                random_int(20, 120),
+                imagecolorallocate($image, random_int(120, 255), random_int(80, 200), 40)
+            );
+        }
+        ob_start();
+        imagejpeg($image, null, 92);
+        $binary = (string) ob_get_clean();
+        imagedestroy($image);
+        return $binary;
+    }
+
     private function png(int $width, int $height): string
     {
         $image = imagecreatetruecolor($width, $height);
         imagesavealpha($image, true);
         imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        for ($i = 0; $i < 10; $i++) {
+            imagefilledellipse(
+                $image,
+                random_int(0, $width),
+                random_int(0, $height),
+                random_int(40, 200),
+                random_int(40, 200),
+                imagecolorallocate($image, random_int(20, 240), random_int(20, 240), random_int(20, 240))
+            );
+        }
         ob_start();
         imagepng($image);
         $binary = (string) ob_get_clean();
@@ -84,10 +119,34 @@ final class ImageUploadServiceTest extends TestCase
     /** Le WebP vient EN PLUS du repli, jamais à la place. */
     public function testUnWebpEstEcritACoteDuRepli(): void
     {
-        $this->service()->store($this->upload($this->jpeg(400, 300)), 'img/offers', 'offre-8');
+        $this->service()->store($this->upload($this->photo(400, 300)), 'img/offers', 'offre-8');
 
         self::assertFileExists($this->publicDir . '/img/offers/offre-8.jpg');
         self::assertFileExists($this->publicDir . '/img/offers/offre-8.webp');
+    }
+
+    /**
+     * Le gabarit sert le WebP dès qu'il existe. Sur un aplat transparent, un
+     * PNG quantifié le bat largement : garder le WebP ferait payer au visiteur
+     * le double du nécessaire au nom de la modernité du format.
+     */
+    public function testUnWebpPlusLourdQueLeRepliNEstPasConserve(): void
+    {
+        $this->service()->store($this->upload($this->png(900, 600)), 'img/offers', 'aplat');
+
+        $fallback = $this->publicDir . '/img/offers/aplat.png';
+        self::assertFileExists($fallback);
+
+        $webp = $this->publicDir . '/img/offers/aplat.webp';
+        if (is_file($webp)) {
+            self::assertLessThan(
+                filesize($fallback),
+                filesize($webp),
+                'un WebP conservé doit être plus léger que son repli'
+            );
+        } else {
+            self::assertTrue(true, 'WebP écarté car plus lourd que le repli');
+        }
     }
 
     public function testLeRepertoireEstCreeSiBesoin(): void

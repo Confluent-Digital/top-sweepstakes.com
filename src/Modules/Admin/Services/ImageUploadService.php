@@ -40,6 +40,17 @@ final class ImageUploadService
     /** Garde anti-bombe de decompression : une image minuscule peut declarer des dimensions enormes. */
     private const MAX_PIXELS = 40_000_000;
 
+    /**
+     * Qualite d'encodage, JPEG comme WebP.
+     *
+     * Mesure sur un visuel de dotation type : 82 rend 64 Ko en JPEG et 33 Ko en
+     * WebP, contre 49 et 26 Ko a 70. Les 7 Ko de WebP separant 76 de 82 ne se
+     * voient pas a l'ecran, mais on garde 82 : le WebP est deja a la moitie du
+     * JPEG, et une dotation floue coute plus cher en conversion que le poids
+     * qu'elle economise.
+     */
+    private const QUALITY = 82;
+
     public function __construct(private string $publicDir)
     {
     }
@@ -179,20 +190,35 @@ final class ImageUploadService
         $fallbackPath = $directory . '/' . $base . '.' . $extension;
 
         $ok = match ($extension) {
-            'png' => imagepng($image, $fallbackPath, 8),
-            default => imagejpeg($image, $fallbackPath, 82),
+            'png' => imagepng($image, $fallbackPath, 9),
+            default => imagejpeg($image, $fallbackPath, self::QUALITY),
         };
         if (!$ok) {
             return false;
         }
+
+        if ($extension === 'png') {
+            $this->quantize($fallbackPath);
+        }
         @chmod($fallbackPath, 0664);
 
         // WebP en complement, jamais a la place : un navigateur qui ne le
-        // supporte pas doit trouver le repli.
-        if (function_exists('imagewebp')) {
-            $webpPath = $directory . '/' . $base . '.webp';
-            if (@imagewebp($image, $webpPath, 82)) {
+        // supporte pas doit trouver le repli. Sur une photo il pese environ la
+        // moitie du JPEG, et c'est lui que recevra la quasi-totalite du trafic.
+        //
+        // Mais pas toujours : sur un aplat transparent, un PNG quantifie en 8
+        // bits bat le WebP — mesure sur un logo detoure, 4,9 Ko contre 11,1 Ko.
+        // Le gabarit sert le WebP en priorite des qu'il existe ; on ne le garde
+        // donc que s'il est reellement plus leger, sinon on ferait payer au
+        // visiteur le double du necessaire au nom de la modernite du format.
+        $webpPath = $directory . '/' . $base . '.webp';
+        @unlink($webpPath);
+
+        if (function_exists('imagewebp') && @imagewebp($image, $webpPath, self::QUALITY)) {
+            if (filesize($webpPath) < filesize($fallbackPath)) {
                 @chmod($webpPath, 0664);
+            } else {
+                @unlink($webpPath);
             }
         }
 
@@ -205,6 +231,42 @@ final class ImageUploadService
         }
 
         return true;
+    }
+
+    /**
+     * Quantification du PNG en 8 bits, si pngquant est disponible.
+     *
+     * GD compresse mais ne quantifie pas : un logo detoure sort en 24 bits et
+     * pese trois fois ce qu'il devrait. La transparence est preservee.
+     *
+     * **L'echec est sans consequence** : le fichier d'origine reste en place et
+     * reste servable. Une image moins legere vaut mieux qu'un televersement qui
+     * echoue parce qu'un binaire manque.
+     */
+    private function quantize(string $path): void
+    {
+        if (!is_executable('/usr/bin/pngquant')) {
+            return;
+        }
+
+        $temporary = $path . '.quant';
+        $command = sprintf(
+            '/usr/bin/pngquant --quality=65-90 --speed 3 --strip --force --output %s -- %s 2>/dev/null',
+            escapeshellarg($temporary),
+            escapeshellarg($path)
+        );
+        @exec($command, $output, $status);
+
+        // pngquant rend 99 quand il ne tient pas la qualite demandee, et 98
+        // quand il ne gagne rien : dans les deux cas on garde l'original.
+        if (
+            $status === 0 && is_file($temporary) && filesize($temporary) > 0
+            && filesize($temporary) < filesize($path)
+        ) {
+            @rename($temporary, $path);
+            return;
+        }
+        @unlink($temporary);
     }
 
     /** Nom genere a partir d'une intention, jamais repris du client. */

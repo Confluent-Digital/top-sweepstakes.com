@@ -8,6 +8,7 @@ use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
 use App\Modules\Admin\Controllers\OfferAdminController;
+use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
 use App\Modules\Stats\Controllers\StatsController;
@@ -73,6 +74,8 @@ $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void 
     $admin->get('/leads', LeadAdminController::class . ':index');
     $admin->get('/leads/export', LeadAdminController::class . ':export');
     $admin->get('/leads/{id:[0-9]+}', LeadAdminController::class . ':show');
+
+    $admin->map(['GET', 'POST'], '/settings', SettingController::class . ':edit');
 
     $admin->get('/stats/offers', StatsController::class . ':offers');
     $admin->get('/stats/sources', StatsController::class . ':sources');

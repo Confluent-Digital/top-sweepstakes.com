@@ -8,6 +8,11 @@ USER root
 RUN docker-php-ext-install -j"$(nproc)" pdo_mysql mysqli bcmath \
     && docker-php-ext-enable pdo_mysql mysqli bcmath
 
+# pngquant : quantification 24 -> 8 bits sur les PNG. GD compresse sans
+# quantifier, et un logo detoure en PNG 24 bits pese trois fois ce qu'il devrait.
+# Le service s'en passe s'il est absent — l'image est simplement moins legere.
+RUN apk add --no-cache pngquant
+
 # L'entrypoint de l'image de base chmod des chemins propres aux landing pages
 # (public/__gestion/config, src/Controllers/user) qui n'existent pas ici : avec
 # `set -e` il sortirait en erreur avant meme de lancer php-fpm.

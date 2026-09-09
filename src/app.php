@@ -15,12 +15,14 @@ use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
 use App\Modules\Admin\Controllers\OfferAdminController;
+use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
 use App\Modules\Admin\Models\Repositories\AdminLeadRepository;
 use App\Modules\Admin\Models\Repositories\AdminOfferRepository;
 use App\Modules\Admin\Models\Repositories\AdminSweepstakeRepository;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
+use App\Modules\Admin\Models\Repositories\SettingRepository;
 use App\Modules\Admin\Services\ImageUploadService;
 use App\Modules\Leads\Models\Repositories\ConsentRepository;
 use App\Modules\Leads\Models\Repositories\LeadRepository;
@@ -84,6 +86,7 @@ $container->set(
 $container->set(AdminOfferRepository::class, fn(Container $c) => new AdminOfferRepository($c->get(Database::class)));
 $container->set(AdminLeadRepository::class, fn(Container $c) => new AdminLeadRepository($c->get(Database::class)));
 $container->set(ImageUploadService::class, fn() => new ImageUploadService($rootDir . '/public'));
+$container->set(SettingRepository::class, fn(Container $c) => new SettingRepository($c->get(Database::class)));
 $container->set(
     PlatformReportRepository::class,
     fn(Container $c) => new PlatformReportRepository($c->get(Database::class))
@@ -169,6 +172,12 @@ $container->set(OfferAdminController::class, fn(Container $c) => new OfferAdminC
     $c->get(AdminUserRepository::class),
     $c->get(ImageUploadService::class),
 ));
+$container->set(SettingController::class, fn(Container $c) => new SettingController(
+    $c->get(Twig::class),
+    $c->get(SettingRepository::class),
+    $c->get(ImageUploadService::class),
+    $c->get(AdminUserRepository::class),
+));
 $container->set(StatsController::class, fn(Container $c) => new StatsController(
     $c->get(Twig::class),
     $c->get(Database::class),
@@ -235,7 +244,10 @@ $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
-$app->add(new TemplateContextMiddleware($container->get(Twig::class)));
+$app->add(new TemplateContextMiddleware(
+    $container->get(Twig::class),
+    $container->get(SettingRepository::class),
+));
 $app->add(new SecurityHeadersMiddleware());
 $app->addErrorMiddleware($config->bool('APP_DEBUG'), true, true, $container->get(Logger::class));
 

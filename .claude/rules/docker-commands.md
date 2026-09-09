@@ -50,6 +50,24 @@ l'hôte qu'à défaut.
 
 Même logique pour `composer`, `phinx` et `phpunit` : toujours dans le conteneur.
 
+## ⚠️ `mariadb -B` échappe les sauts de ligne
+
+Le mode batch (`-B`, souvent utilisé avec `-N` pour scripter) rend les sauts de ligne sous forme de
+`\n` **littéraux**. Reprendre cette sortie et la réinjecter — dans un formulaire, un autre
+`INSERT` — écrit des `\n` en clair dans la donnée.
+
+C'est arrivé sur les Official Rules du concours de démonstration : la page affichait
+`</h2>\n<p>A purchase…`. Rien ne le signale, et cela ne se voit qu'au rendu.
+
+Pour extraire un champ multiligne destiné à être réinjecté, passer par PHP plutôt que par le
+client en mode batch :
+
+```bash
+docker exec topsweepstakes_php php -r '$pdo = new PDO(...); echo $pdo->query("SELECT ...")->fetchColumn();'
+```
+
+Le mode batch reste parfait pour lire des identifiants, des compteurs et des colonnes courtes.
+
 ## Logs
 
 - Applicatifs : `logs/app.log` (Monolog).

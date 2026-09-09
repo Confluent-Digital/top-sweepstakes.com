@@ -47,6 +47,24 @@ lisibles sans alias et évite les collisions de noms dans les `SELECT *` croisé
 - **Une IP se stocke en `VARCHAR(45)`**, jamais en `INT` via `ip2long` : IPv6 existe, et une preuve
   de consentement amputée de l'IP ne vaut rien.
 
+## Images
+
+Les visuels ne sont **jamais stockés tels quels** : `ImageUploadService` les décode puis les
+réencode, donc les reconstruit. Un polyglotte — image valide portant du PHP dans ses métadonnées —
+n'y survit pas, là où une simple vérification du type MIME le laisserait passer.
+
+Chaîne appliquée : redimensionnement à 1 200 px, réencodage en qualité 82, quantification 8 bits
+des PNG par `pngquant`, et WebP écrit à côté du repli.
+
+**Le WebP n'est conservé que s'il est plus léger que le repli.** Mesuré : sur une photo il pèse la
+moitié du JPEG, mais sur un aplat transparent un PNG quantifié le bat largement — 4,9 Ko contre
+11,1 Ko sur un logo détouré. Le gabarit servant le WebP dès qu'il existe, le garder ferait payer au
+visiteur le double du nécessaire.
+
+Les **dimensions réelles** sont enregistrées en base (`*_image_width` / `*_image_height`) : sans
+elles, le gabarit réserve une place fixe et le bouton descend au chargement d'un visuel portrait,
+au moment où le visiteur vise.
+
 ## Rétention
 
 Toute table contenant des données personnelles porte une durée de conservation documentée dans

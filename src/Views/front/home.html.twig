@@ -1,21 +1,20 @@
 {% extends 'front/layout.html.twig' %}
 
-{% block title %}Free sweepstakes — {{ app_name }}{% endblock %}
-{% block description %}Enter free sweepstakes for gift cards and prizes. No purchase necessary.{% endblock %}
+{% block title %}{{ site.site_meta_title|default('Free sweepstakes — ' ~ site.site_name) }}{% endblock %}
+{% block description %}{{ site.site_meta_description|default(site.site_intro) }}{% endblock %}
 {# L'accueil est la seule page du site qui a vocation à être indexée. #}
 {% block robots %}index, follow{% endblock %}
 {% block main_class %} site-main--wide{% endblock %}
 
 {% block content %}
     <section class="home-head">
-        <h1 class="home-title">Enter today&rsquo;s sweepstakes</h1>
-        <p class="home-sub">
-            Free to enter. No purchase necessary. Open to U.S. residents 18 and older.
-        </p>
+        {# Titre et accroche viennent des réglages : /admin/settings. #}
+        <h1 class="home-title">{{ site.site_tagline }}</h1>
+        <p class="home-sub">{{ site.site_intro }}</p>
     </section>
 
     {% if sweepstakes is empty %}
-        <p class="empty-state">No sweepstakes are open right now. Please check back soon.</p>
+        <p class="empty-state">{{ site.site_empty_message }}</p>
     {% else %}
         {#
             Toutes les cartes au même rang, y compris celle de la dotation la

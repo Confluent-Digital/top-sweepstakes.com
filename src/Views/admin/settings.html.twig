@@ -1,0 +1,173 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Réglages du site{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <h1 class="page-title">Réglages du site</h1>
+        <p class="page-sub">
+            Ce qui s'applique à tout le site, indépendamment des concours.
+            Une modification est visible immédiatement, sans mise en production.
+        </p>
+    </div>
+
+    {% if saved %}<div class="alert alert-success">Réglages enregistrés.</div>{% endif %}
+    {% if errors is not empty %}
+        <div class="alert alert-danger">Corrigez les champs signalés ci-dessous.</div>
+    {% endif %}
+
+    <form method="post" action="/admin/settings" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header">Identité</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="site_name">Nom du site</label>
+                            <input class="form-control {{ errors.site_name is defined ? 'is-invalid' }}"
+                                   id="site_name" name="site_name" value="{{ values.site_name }}">
+                            {% if errors.site_name is defined %}
+                                <div class="invalid-feedback">{{ errors.site_name }}</div>
+                            {% endif %}
+                            <div class="form-text">Affiché dans l'en-tête et le pied de chaque page.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="site_company_name">Raison sociale</label>
+                            <input class="form-control" id="site_company_name" name="site_company_name"
+                                   value="{{ values.site_company_name }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="site_postal_address">Adresse postale</label>
+                            <input class="form-control {{ errors.site_postal_address is defined ? 'is-invalid' }}"
+                                   id="site_postal_address" name="site_postal_address"
+                                   value="{{ values.site_postal_address }}">
+                            {% if errors.site_postal_address is defined %}
+                                <div class="invalid-feedback">{{ errors.site_postal_address }}</div>
+                            {% endif %}
+                            {#
+                                CAN-SPAM exige une adresse postale physique. Renseignée ici,
+                                elle couvre les pages hors concours — dont /unsubscribe, qui
+                                est justement la page d'atterrissage d'un lien de désinscription
+                                et n'en affichait aucune.
+                            #}
+                            <div class="form-text">
+                                Obligatoire (CAN-SPAM). Sert de repli sur les pages qui ne sont
+                                rattachées à aucun concours, dont la page de désinscription.
+                                L'adresse du sponsor d'un concours la remplace sur ses pages.
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label" for="site_contact_email">E-mail de contact</label>
+                            <input type="email" class="form-control {{ errors.site_contact_email is defined ? 'is-invalid' }}"
+                                   id="site_contact_email" name="site_contact_email"
+                                   value="{{ values.site_contact_email }}">
+                            {% if errors.site_contact_email is defined %}
+                                <div class="invalid-feedback">{{ errors.site_contact_email }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Page d'accueil</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="site_tagline">Titre</label>
+                            <input class="form-control" id="site_tagline" name="site_tagline"
+                                   value="{{ values.site_tagline }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="site_intro">Accroche</label>
+                            <textarea class="form-control" id="site_intro" name="site_intro"
+                                      rows="2">{{ values.site_intro }}</textarea>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label" for="site_empty_message">Message quand aucun concours n'est ouvert</label>
+                            <input class="form-control" id="site_empty_message" name="site_empty_message"
+                                   value="{{ values.site_empty_message }}">
+                            <div class="form-text">
+                                L'accueil est la seule page indexée du site : elle ne doit jamais
+                                paraître vide ou cassée, même sans concours en cours.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header">Référencement</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="site_meta_title">Titre SEO de l'accueil</label>
+                            <input class="form-control" id="site_meta_title" name="site_meta_title"
+                                   value="{{ values.site_meta_title }}">
+                            <div class="form-text">Vide : le nom du site est utilisé.</div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label" for="site_meta_description">Description SEO</label>
+                            <textarea class="form-control" id="site_meta_description"
+                                      name="site_meta_description" rows="2">{{ values.site_meta_description }}</textarea>
+                            <div class="form-text">
+                                Seul l'accueil est indexé. Les pages du tunnel sont en
+                                <code>noindex</code> : elles vivent de trafic payé.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Visuels</div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <label class="form-label" for="favicon">Favicon</label>
+                            {% if values.site_favicon %}
+                                <div class="media-current mb-2">
+                                    <img src="/img/site/{{ values.site_favicon }}" alt="Favicon actuelle"
+                                         width="32" height="32">
+                                    <span class="form-text">Actuelle : <code>{{ values.site_favicon }}</code></span>
+                                </div>
+                            {% endif %}
+                            <input type="file" class="form-control {{ errors.favicon is defined ? 'is-invalid' }}"
+                                   id="favicon" name="favicon" accept="image/png,image/jpeg,image/webp">
+                            {% if errors.favicon is defined %}
+                                <div class="invalid-feedback">{{ errors.favicon }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                PNG carré, 180 px ou plus. Le fichier est réencodé au dépôt :
+                                le format <code>.ico</code> n'est pas accepté, les navigateurs
+                                actuels lisent tous le PNG.
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label" for="og_image">Image de partage</label>
+                            {% if values.site_og_image %}
+                                <div class="media-current mb-2">
+                                    <img src="/img/site/{{ values.site_og_image }}" alt="Image de partage actuelle"
+                                         width="120" height="63">
+                                    <span class="form-text">Actuelle : <code>{{ values.site_og_image }}</code></span>
+                                </div>
+                            {% endif %}
+                            <input type="file" class="form-control {{ errors.og_image is defined ? 'is-invalid' }}"
+                                   id="og_image" name="og_image" accept="image/png,image/jpeg,image/webp">
+                            {% if errors.og_image is defined %}
+                                <div class="invalid-feedback">{{ errors.og_image }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Affichée quand un lien du site est partagé. Format paysage,
+                                1200 × 630 recommandé.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+    </form>
+{% endblock %}

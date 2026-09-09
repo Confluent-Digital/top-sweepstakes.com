@@ -39,6 +39,24 @@ chaque centaine de millisecondes se paie en taux de conversion.
 
 ## Back-office
 
+### Réglages du site
+
+`/admin/settings` porte ce qui vaut pour tout le site : nom, textes de l'accueil, métadonnées,
+raison sociale, **adresse postale**, favicon, image de partage. Table `t_setting`, en clé/valeur —
+ajouter un réglage ne demande donc pas de migration, seulement une entrée dans
+`SettingRepository::DEFAULTS`.
+
+Ils sont exposés à **tous** les gabarits sous `site` par `TemplateContextMiddleware`, jamais passés
+par un contrôleur : pour l'adresse postale, un oubli n'est pas une gêne d'affichage mais une
+mention légale manquante.
+
+**L'adresse postale suit une règle de repli** : celle du sponsor sur les pages d'un concours, celle
+du site partout ailleurs. Sans ce repli, `/unsubscribe` n'en affichait aucune — alors que c'est
+précisément la page d'atterrissage d'un lien de désinscription, là où CAN-SPAM l'exige.
+
+Une valeur vide en base ne masque jamais le défaut : un intitulé effacé par inadvertance laisserait
+un trou sur la seule page indexée du site.
+
 ### ⚠️ Le piège des fiches d'édition
 
 Les fiches suivent toutes le même motif : `extract($input)` construit le tableau **complet** des
