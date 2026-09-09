@@ -1,41 +1,68 @@
-<form method="get" class="card card-body mb-3">
-    <div class="row g-2 align-items-end">
-        <div class="col-auto">
-            <label class="form-label" for="from">Du</label>
-            <input type="date" class="form-control form-control-sm" id="from" name="from" value="{{ from }}">
-        </div>
-        <div class="col-auto">
-            <label class="form-label" for="to">Au</label>
-            <input type="date" class="form-control form-control-sm" id="to" name="to" value="{{ to }}">
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-primary btn-sm" type="submit">Afficher</button>
-        </div>
+{#
+    Bandeau de période partagé par les écrans de mesure.
+
+    Deux règles y sont visibles en permanence, parce que ce sont les deux façons
+    de se tromper le plus vite sur un tableau de chiffres :
+      — un total porte sur la PÉRIODE ENTIÈRE, pas sur la page affichée ;
+      — un taux sans impression n'est pas 0 %, il n'existe pas.
+#}
+<form method="get" class="card card-body py-2 mb-3">
+    <div class="filter-bar">
+        <label class="filter">
+            <span class="filter-label">Du</span>
+            <input type="date" class="form-control" id="from" name="from" value="{{ from }}">
+        </label>
+        <label class="filter">
+            <span class="filter-label">Au</span>
+            <input type="date" class="form-control" id="to" name="to" value="{{ to }}">
+        </label>
+        <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-arrow-repeat"></i> Afficher</button>
+        {# Raccourcis : la fenêtre qu'on ouvre vingt fois par jour ne doit pas
+           se saisir au clavier vingt fois par jour. #}
+        <span class="filter-label ms-2">Raccourcis</span>
+        <a class="btn btn-outline-secondary btn-xs" href="?from={{ 'now'|date('Y-m-d') }}&amp;to={{ 'now'|date('Y-m-d') }}">Aujourd'hui</a>
+        <a class="btn btn-outline-secondary btn-xs" href="?from={{ '-6 days'|date('Y-m-d') }}&amp;to={{ 'now'|date('Y-m-d') }}">7 j</a>
+        <a class="btn btn-outline-secondary btn-xs" href="?from={{ '-14 days'|date('Y-m-d') }}&amp;to={{ 'now'|date('Y-m-d') }}">15 j</a>
+        <a class="btn btn-outline-secondary btn-xs" href="?from={{ '-29 days'|date('Y-m-d') }}&amp;to={{ 'now'|date('Y-m-d') }}">30 j</a>
     </div>
 </form>
 
 <div class="row g-3 mb-3">
     {% set summary = [
-        {label: 'Impressions', value: totals.impressions|number_format(0, ',', ' ')},
-        {label: 'Clics', value: totals.clicks|number_format(0, ',', ' ')},
-        {label: 'Revenu', value: '$' ~ totals.revenue|number_format(2)},
-        {label: 'Taux de clic', value: totals.ctr is null ? null : totals.ctr ~ ' %'},
-        {label: 'eCPM', value: totals.ecpm is null ? null : '$' ~ totals.ecpm|number_format(4)}
+        {label: 'Impressions', value: totals.impressions|number_format(0, ',', ' '), icon: 'eye',
+         hint: 'offres affichées sur la période'},
+        {label: 'Clics', value: totals.clicks|number_format(0, ',', ' '), icon: 'cursor',
+         hint: 'sorties vers la régie'},
+        {label: 'Revenu', value: '$' ~ totals.revenue|number_format(2), icon: 'cash-stack',
+         hint: 'rattaché par idc au flux de la régie'},
+        {label: 'Taux de clic', value: totals.ctr is null ? null : totals.ctr ~ ' %', icon: 'percent',
+         hint: 'clics ÷ impressions'},
+        {label: 'eCPM', value: totals.ecpm is null ? null : '$' ~ totals.ecpm|number_format(4), icon: 'graph-up',
+         hint: 'revenu pour 1 000 impressions'}
     ] %}
     {% for card in summary %}
         <div class="col-6 col-lg">
-            <div class="card card-body py-2">
-                <div class="text-muted small">{{ card.label }}</div>
-                <div class="fs-5">
-                    {# Sans impression, il n'y a pas de taux : le dire, plutot
+            <div class="stat">
+                <div class="stat-label"><i class="bi bi-{{ card.icon }}"></i> {{ card.label }}</div>
+                <div class="stat-value">
+                    {# Sans impression, il n'y a pas de taux : le dire, plutôt
                        qu'afficher 0 % qui se lirait comme une contre-performance. #}
-                    {{ card.value ?? '<span class="empty">aucune donnée</span>'|raw }}
+                    {% if card.value is null %}
+                        <span class="na">pas de base de calcul</span>
+                    {% else %}{{ card.value }}{% endif %}
                 </div>
+                <div class="stat-hint">{{ card.hint }}</div>
+                <i class="bi bi-{{ card.icon }} stat-mark" aria-hidden="true"></i>
             </div>
         </div>
     {% endfor %}
 </div>
 
-<p class="text-muted small">
-    Les totaux portent sur la période et le filtre affichés, pas sur la page.
-</p>
+<div class="scope-note">
+    <i class="bi bi-info-circle"></i>
+    <span>
+        Les cinq totaux ci-dessus portent sur <strong>toute la période du {{ from }} au {{ to }}</strong>
+        et sur l'intégralité des lignes — <strong>jamais sur la page affichée</strong>.
+    </span>
+    <span class="scope-page">Heures en America/New_York</span>
+</div>

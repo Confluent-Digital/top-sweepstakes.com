@@ -2,46 +2,96 @@
 {% block title %}Statistiques — sources{% endblock %}
 
 {% block content %}
-    <h1 class="h4 mb-3">Performance par source</h1>
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Performance par source</h1>
+            <div class="page-sub">Du {{ from }} au {{ to }} · trié par revenu décroissant</div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/leads"><i class="bi bi-people"></i> Participants</a>
+        </div>
+    </div>
+
     {% include 'admin/stats/_period.html.twig' %}
 
     {% if rows is empty %}
-        <div class="card card-body empty">Aucune donnée sur la période.</div>
-    {% else %}
         <div class="card">
-            <table class="table table-sm mb-0 align-middle">
-                <thead>
-                <tr>
-                    <th>subid</th><th class="text-end">Participations</th>
-                    <th class="text-end">Impressions</th><th class="text-end">Clics</th>
-                    <th class="text-end">Revenu</th><th class="text-end">Revenu / participation</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for r in rows %}
-                    <tr>
-                        <td>{{ r.subid }}</td>
-                        <td class="text-end">{{ r.entries|number_format(0, ',', ' ') }}</td>
-                        <td class="text-end">{{ r.impressions|number_format(0, ',', ' ') }}</td>
-                        <td class="text-end">{{ r.clicks|number_format(0, ',', ' ') }}</td>
-                        <td class="text-end">${{ r.revenue|number_format(2) }}</td>
-                        <td class="text-end">
-                            {# C'est cette colonne qui dit si une source est rentable :
-                               le revenu brut ne dit rien sans le volume qui l'a produit. #}
-                            {% if r.revenue_per_entry is null %}
-                                <span class="empty">—</span>
-                            {% else %}
-                                ${{ r.revenue_per_entry|number_format(4) }}
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            {% include 'admin/_blank.html.twig' with {
+                'icon': 'signpost-split',
+                'title': 'Aucune donnée sur la période',
+                'text': "Une source apparaît dès qu'une participation lui est rattachée. Le subid est lu dans l'URL de la landing : sans subid, la participation est comptée en « (direct) ». Aucune ligne ne veut donc dire aucune participation complète sur la fenêtre choisie.",
+                'cta_url': '/admin/sweepstakes',
+                'cta_label': 'Vérifier les concours publiés',
+                'cta_icon': 'trophy'
+            } only %}
         </div>
-        <p class="form-text mt-2">
-            Le revenu par participation se compare au coût d'acquisition de la source pour savoir
-            si elle est rentable. Une source sans participation sur la période n'a pas de ratio.
+    {% else %}
+        <div class="card card-table">
+            <div class="table-responsive table-scroll">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th>subid</th><th class="num">Participations</th>
+                        <th class="num">Démarchables</th>
+                        <th class="num">Impressions</th><th class="num">Clics</th>
+                        <th class="num">Revenu</th><th class="num">Revenu / participation</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in rows %}
+                        <tr>
+                            <td class="cell-key"><code>{{ r.subid }}</code></td>
+                            <td class="num">{{ r.entries|number_format(0, ',', ' ') }}</td>
+                            <td class="num">
+                                {# Le téléphone est obligatoire : c'est la part de numéros
+                                   assortis d'un consentement TCPA qui distingue les sources. #}
+                                {% if r.tcpa_rate is null %}
+                                    <span class="na">aucun numéro</span>
+                                {% else %}
+                                    {{ r.tcpa_rate }} %
+                                    <span class="cell-meta">({{ r.tcpa_granted }}/{{ r.phones }})</span>
+                                {% endif %}
+                            </td>
+                            <td class="num">{{ r.impressions|number_format(0, ',', ' ') }}</td>
+                            <td class="num">{{ r.clicks|number_format(0, ',', ' ') }}</td>
+                            <td class="num">${{ r.revenue|number_format(2) }}</td>
+                            <td class="num">
+                                {# C'est cette colonne qui dit si une source est rentable :
+                                   le revenu brut ne dit rien sans le volume qui l'a produit. #}
+                                {% if r.revenue_per_entry is null %}
+                                    <span class="na">pas de participation</span>
+                                {% else %}
+                                    ${{ r.revenue_per_entry|number_format(4) }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="3">
+                            <span class="tfoot-scope">Total — période entière, {{ rows|length }} sources</span>
+                        </td>
+                        <td class="num">{{ totals.impressions|number_format(0, ',', ' ') }}</td>
+                        <td class="num">{{ totals.clicks|number_format(0, ',', ' ') }}</td>
+                        <td class="num">${{ totals.revenue|number_format(2) }}</td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <p class="screen-note mt-3">
+            <strong>Revenu / participation</strong> se compare au coût d'acquisition de la source :
+            c'est la seule colonne qui dise si elle est rentable. Un revenu brut élevé sur un gros
+            volume peut coûter plus qu'il ne rapporte.
+        </p>
+        <p class="screen-note">
+            <strong>Démarchables</strong> : part des numéros collectés assortis d'un consentement TCPA.
+            Le téléphone étant obligatoire, son taux de collecte vaut toujours 100 % et n'apprend rien —
+            c'est cette colonne qui dit combien de numéros sont réellement exploitables, et elle varie
+            beaucoup d'une source à l'autre.
         </p>
     {% endif %}
 {% endblock %}

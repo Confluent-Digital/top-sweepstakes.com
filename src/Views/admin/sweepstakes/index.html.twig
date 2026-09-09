@@ -2,56 +2,119 @@
 {% block title %}Concours{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0">Concours</h1>
-        <a class="btn btn-primary" href="/admin/sweepstakes/new">Nouveau concours</a>
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Concours</h1>
+            <div class="page-sub">Identité, dotation, conformité, thème et offres — tout se règle en base, jamais en déployant</div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-primary btn-sm" href="/admin/sweepstakes/new"><i class="bi bi-plus-lg"></i> Nouveau concours</a>
+        </div>
     </div>
 
     {% if sweepstakes is empty %}
-        <div class="card card-body empty">Aucun concours. Commencez par en creer un.</div>
-    {% else %}
         <div class="card">
-            <table class="table table-sm mb-0 align-middle">
-                <thead>
-                <tr>
-                    <th>Nom</th><th>Slug</th><th>Statut</th><th>Dotation</th>
-                    <th>Periode</th><th class="text-end">Participations</th><th></th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for s in sweepstakes %}
-                    <tr>
-                        <td>{{ s.sweepstake_name }}</td>
-                        <td><code>{{ s.sweepstake_slug }}</code></td>
-                        <td>
-                            <span class="badge badge-status-{{ s.sweepstake_status }}">{{ s.sweepstake_status }}</span>
-                        </td>
-                        <td>
-                            {% if s.sweepstake_prize_value_usd > 0 %}
-                                ${{ s.sweepstake_prize_value_usd|number_format(0) }}
-                            {% else %}<span class="empty">—</span>{% endif %}
-                        </td>
-                        <td class="small">
-                            {{ s.sweepstake_date_start ?: '—' }} → {{ s.sweepstake_date_end ?: '—' }}
-                        </td>
-                        <td class="text-end">{{ s.entries }}</td>
-                        <td class="text-end text-nowrap">
-                            <a class="btn btn-sm btn-outline-secondary" href="/admin/sweepstakes/{{ s.sweepstake_id }}/edit">Editer</a>
-                            {% if s.sweepstake_status == 'published' %}
-                                <a class="btn btn-sm btn-outline-secondary" href="/{{ s.sweepstake_slug }}" target="_blank" rel="noopener">Voir</a>
-                            {% endif %}
-                            {# La duplication est le geste central : un concours proche
-                               existe presque toujours, et repartir de lui evite de
-                               ressaisir dotation, champs, theme et offres. #}
-                            <form method="post" action="/admin/sweepstakes/{{ s.sweepstake_id }}/duplicate" class="d-inline">
-                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm btn-outline-primary" type="submit">Dupliquer</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            {% include 'admin/_blank.html.twig' with {
+                'icon': 'trophy',
+                'title': 'Aucun concours',
+                'text': "Un concours porte sa dotation, ses Official Rules, ses champs de formulaire, son thème et ses offres. Le plus rapide est de dupliquer un concours proche : dotation, champs, thème et offres sont repris.",
+                'cta_url': '/admin/sweepstakes/new',
+                'cta_label': 'Créer un concours',
+                'cta_icon': 'plus-lg'
+            } only %}
         </div>
+    {% else %}
+        {# Le compte porte sur l'ensemble des concours : cette liste n'est ni
+           filtrée ni paginée, l'écran le dit pour qu'on n'en doute pas. #}
+        <div class="scope-note">
+            <span class="scope-count">{{ sweepstakes|length }}</span>
+            <span>concours au total — liste complète, ni filtrée ni paginée</span>
+        </div>
+
+        <div class="card card-table">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th>Nom</th><th>Slug</th><th>Diffusion</th><th class="num">Dotation</th>
+                        <th>Période</th><th class="num">Offres</th><th class="num">Participations</th>
+                        <th class="num">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for s in sweepstakes %}
+                        {#
+                            Un concours publié sans Official Rules est une
+                            non-conformité en ligne : le rail rouge le sort de la
+                            liste sans qu'on ait à lire la ligne.
+                        #}
+                        {% set no_rules = s.sweepstake_status == 'published' and not s.sweepstake_official_rules_html %}
+                        <tr class="{{ no_rules ? 'row-bad' : (s.sweepstake_status in ['draft', 'ended'] ? 'row-off' : '') }}">
+                            <td class="cell-key">
+                                <a href="/admin/sweepstakes/{{ s.sweepstake_id }}/edit">{{ s.sweepstake_name }}</a>
+                            </td>
+                            <td><code class="small">{{ s.sweepstake_slug }}</code></td>
+                            <td>
+                                <span class="flag-stack">
+                                    <span class="badge badge-status-{{ s.sweepstake_status }}">{{ s.sweepstake_status }}</span>
+                                    {% if no_rules %}
+                                        <span class="flag flag--bad" title="Un concours publié sans Official Rules ne peut pas être défendu : NO PURCHASE NECESSARY, AMOE, sponsor, ARV, États exclus.">
+                                            <i class="bi bi-file-earmark-x"></i> RÈGLES MANQUANTES
+                                        </span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="num">
+                                {% if s.sweepstake_prize_value_usd > 0 %}
+                                    ${{ s.sweepstake_prize_value_usd|number_format(0) }}
+                                {% else %}<span class="na">non chiffrée</span>{% endif %}
+                            </td>
+                            <td class="cell-meta text-nowrap">
+                                {% if s.sweepstake_date_start or s.sweepstake_date_end %}
+                                    {{ s.sweepstake_date_start ?: '—' }} → {{ s.sweepstake_date_end ?: '—' }}
+                                {% else %}<span class="na">sans dates</span>{% endif %}
+                            </td>
+                            <td class="num">
+                                {% if s.sweepstake_offer_steps > 0 %}
+                                    {{ s.sweepstake_offer_steps }}
+                                {% else %}<span class="na">parcours désactivé</span>{% endif %}
+                            </td>
+                            <td class="num">{{ s.entries|number_format(0, ',', ' ') }}</td>
+                            <td class="row-actions">
+                                <a class="btn btn-outline-secondary btn-xs" href="/admin/sweepstakes/{{ s.sweepstake_id }}/edit">
+                                    <i class="bi bi-pencil"></i> Éditer</a>
+                                {% if s.sweepstake_status == 'published' %}
+                                    <a class="btn btn-outline-secondary btn-xs" href="/{{ s.sweepstake_slug }}"
+                                       target="_blank" rel="noopener" title="Ouvre la landing publique dans un nouvel onglet">
+                                        <i class="bi bi-box-arrow-up-right"></i> Voir</a>
+                                {% endif %}
+                                {#
+                                    Le raccourci opérationnel : un concours proche existe
+                                    presque toujours, et repartir de lui évite de ressaisir
+                                    dotation, champs, thème et offres. Le geste crée
+                                    immédiatement un concours en base — d'où la
+                                    confirmation et le style d'action à conséquence.
+                                #}
+                                <form method="post" action="/admin/sweepstakes/{{ s.sweepstake_id }}/duplicate"
+                                      data-confirm="Dupliquer « {{ s.sweepstake_name }} » ? Un nouveau concours est créé immédiatement en base, en brouillon, avec le slug « {{ s.sweepstake_slug }}-copy ». Ses Official Rules et sa dotation sont copiées : elles doivent être relues avant publication.">
+                                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                    <button class="btn btn-caution btn-xs" type="submit"
+                                            title="Crée immédiatement un concours en brouillon">
+                                        <i class="bi bi-copy"></i> Dupliquer</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="screen-note mt-3">
+            <strong>Participations</strong> compte les formulaires complets, tous statuts de concours confondus
+            et sur toute la durée de vie du concours — pas sur une période.
+            <strong>Dupliquer</strong> écrit en base sur-le-champ : le nouveau concours part en
+            <code>draft</code>, avec le suffixe <code>-copy</code>, et ses Official Rules sont celles de la source.
+        </p>
     {% endif %}
 {% endblock %}

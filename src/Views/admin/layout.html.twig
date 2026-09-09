@@ -1,44 +1,104 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Administration{% endblock %} — {{ app_name }}</title>
     <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    {#
+        Le theme est applique avant le premier rendu : sinon l'ecran clignote en
+        blanc a chaque navigation pour un operateur en mode sombre. Le meme
+        code, defensif, est rejoue par admin.js.
+    #}
+    <script>
+        try {
+            var t = localStorage.getItem('ts.theme');
+            if (!t) { t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+            document.documentElement.setAttribute('data-bs-theme', t);
+        } catch (e) { /* sans effet : le theme clair reste */ }
+    </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-    <style>
-        body { background: #f4f6fa; }
-        .navbar-brand { font-weight: 700; }
-        .table-sm td, .table-sm th { vertical-align: middle; }
-        .badge-status-draft { background: #6c757d; }
-        .badge-status-published { background: #198754; }
-        .badge-status-paused { background: #fd7e14; }
-        .badge-status-ended { background: #495057; }
-        .empty { color: #6c757d; font-style: italic; }
-        code.url-preview { word-break: break-all; display: block; }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/dist/css/admin.css">
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<body class="app">
+<nav class="navbar navbar-expand-lg navbar-main border-bottom">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/admin">{{ app_name }}</a>
-        <div class="navbar-nav me-auto">
-            <a class="nav-link" href="/admin">Tableau de bord</a>
-            <a class="nav-link" href="/admin/sweepstakes">Concours</a>
-            <a class="nav-link" href="/admin/offers">Offres</a>
-            <a class="nav-link" href="/admin/leads">Participants</a>
-            <a class="nav-link" href="/admin/stats/offers">Stats offres</a>
-            <a class="nav-link" href="/admin/stats/sources">Stats sources</a>
+        <a class="navbar-brand" href="/admin">
+            <span class="brand-mark"><i class="bi bi-ticket-perforated"></i></span> {{ app_name }}
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+                aria-label="Afficher la navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+            {% set current = app_path|default('') %}
+            <ul class="navbar-nav me-auto">
+                {#
+                    Deux groupes separes par un filet : a gauche ce qu'on edite,
+                    a droite ce qu'on mesure. L'operateur ne se trompe pas de
+                    famille d'ecran en visant vite.
+                #}
+                {% for item in [
+                    {url: '/admin',            label: 'Tableau de bord', icon: 'speedometer2'},
+                    {url: '/admin/sweepstakes', label: 'Concours',       icon: 'trophy'},
+                    {url: '/admin/offers',     label: 'Offres',          icon: 'badge-ad'},
+                    {url: '/admin/leads',      label: 'Participants',    icon: 'people'},
+                    {url: '',                  label: '',                icon: ''},
+                    {url: '/admin/stats/offers',  label: 'Stats offres',  icon: 'bar-chart'},
+                    {url: '/admin/stats/sources', label: 'Stats sources', icon: 'signpost-split'}
+                ] %}
+                    {% if item.url == '' %}
+                        <li class="nav-item d-none d-lg-flex"><span class="nav-sep"></span></li>
+                    {% else %}
+                        {% set active = item.url == '/admin' ? current == '/admin' : current starts with item.url %}
+                        <li class="nav-item">
+                            <a class="nav-link{{ active ? ' active' }}" href="{{ item.url }}"
+                               {{ active ? 'aria-current="page"' : '' }}>
+                                <i class="bi bi-{{ item.icon }}"></i> {{ item.label }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <button class="nav-link border-0 bg-transparent" id="themeToggle" type="button"
+                            title="Passer en mode sombre"
+                            aria-label="Basculer entre le mode clair et le mode sombre">
+                        <i class="bi bi-moon-stars" id="themeIcon"></i>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/logout"><i class="bi bi-box-arrow-right"></i> Déconnexion</a>
+                </li>
+            </ul>
         </div>
-        <a class="nav-link text-light" href="/admin/logout">Deconnexion</a>
     </div>
 </nav>
 
-<main class="container-fluid pb-5">
+<main class="container-fluid px-3 py-3">
     {% block content %}{% endblock %}
 </main>
 
+{#
+    Le fuseau est rappele a l'ecran : c'est la premiere question posee quand un
+    chiffre du jour ne colle pas avec celui de la regie.
+#}
+<footer class="container-fluid px-3 pb-4">
+    <div class="app-foot">
+        <span><i class="bi bi-clock"></i> Heures affichées en <strong>America/New_York</strong></span>
+        <span><i class="bi bi-shield-lock"></i> Accès réservé — écrans non indexés</span>
+    </div>
+</footer>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{# Editeur riche, charge sur toutes les pages du back-office : il ne s'active
+   que s'il trouve un textarea[data-editor="rich"]. #}
+<script src="https://cdn.jsdelivr.net/npm/@ckeditor/ckeditor5-build-classic@41.4.2/build/ckeditor.js"></script>
+<script src="/dist/js/admin-editor.js" defer></script>
+<script src="/dist/js/admin.js"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

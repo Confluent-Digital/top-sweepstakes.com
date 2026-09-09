@@ -1,157 +1,291 @@
 {% extends 'admin/layout.html.twig' %}
-{% block title %}{{ offer.offer_id ? 'Editer une offre' : 'Nouvelle offre' }}{% endblock %}
+{% block title %}{{ offer.offer_id ? 'Éditer une offre' : 'Nouvelle offre' }}{% endblock %}
 
 {% block content %}
-    <h1 class="h4 mb-3">{{ offer.offer_id ? offer.offer_name : 'Nouvelle offre' }}</h1>
+    <div class="page-head">
+        <div>
+            <a class="page-back" href="/admin/offers"><i class="bi bi-arrow-left"></i> Offres</a>
+            <h1 class="page-title">{{ offer.offer_id ? offer.offer_name : 'Nouvelle offre' }}</h1>
+            <div class="page-sub">
+                {% if offer.offer_id %}
+                    {% if offer.offer_active %}
+                        <span class="badge text-bg-success">active</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">inactive</span>
+                    {% endif %}
+                    fiche n° {{ offer.offer_id }} · eCPM 15 j {{ offer.offer_ecpm_15d|default('—') }}
+                {% else %}
+                    Une offre est rattachable à autant de concours qu'on veut ; elle ne dépend d'aucun d'eux.
+                {% endif %}
+            </div>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary btn-sm" type="submit" form="offer-form">
+                <i class="bi bi-check-lg"></i> Enregistrer</button>
+        </div>
+    </div>
 
-    {% if saved %}<div class="alert alert-success">Enregistre.</div>{% endif %}
+    {% if saved %}
+        <div class="alert alert-success"><i class="bi bi-check-circle"></i> Enregistré.</div>
+    {% endif %}
     {% if errors is not empty %}
-        <div class="alert alert-danger">Corrigez les champs signales ci-dessous.</div>
+        <div class="alert alert-danger">
+            <strong><i class="bi bi-exclamation-triangle"></i> Rien n'a été enregistré.</strong>
+            Corrigez les champs signalés ci-dessous.
+        </div>
     {% endif %}
 
-    <form method="post" action="/admin/offers/{{ offer.offer_id ?: 0 }}/edit">
+    {# Les deux manques qui coûtent le plus cher, rappelés avant la fiche. #}
+    {% if offer.offer_id and (not offer.offer_platform_idv or not offer.offer_platform_idc) %}
+        <div class="alert {{ not offer.offer_platform_idv ? 'alert-danger' : 'alert-warning' }}">
+            <div class="flag-stack">
+                {% if not offer.offer_platform_idv %}
+                    <a class="flag flag--bad text-decoration-none" href="#idv">
+                        IDV MANQUANT <span class="flag-why">— cette offre ne s'affichera jamais</span></a>
+                {% endif %}
+                {% if not offer.offer_platform_idc %}
+                    <a class="flag flag--warn text-decoration-none" href="#idc">
+                        IDC MANQUANT <span class="flag-why">— son revenu ne lui sera pas rattaché</span></a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# enctype obligatoire : sans lui le fichier n'arrive jamais au serveur et
+       rien ne le signale — le formulaire s'enregistre, le visuel reste l'ancien. #}
+    <form method="post" enctype="multipart/form-data" id="offer-form"
+          action="/admin/offers/{{ offer.offer_id ?: 0 }}/edit">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 
-        <div class="row g-4">
-            <div class="col-lg-6">
-                <div class="card mb-4">
-                    <div class="card-header">Identite</div>
+        <div class="row g-3">
+            <div class="col-xl-6">
+
+                <div class="card mb-3">
+                    <div class="card-header"><i class="bi bi-card-heading"></i> Identité</div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="name">Nom</label>
-                            <input class="form-control {{ errors.offer_name is defined ? 'is-invalid' }}"
-                                   id="name" name="offer_name" value="{{ offer.offer_name }}">
-                            {% if errors.offer_name is defined %}
-                                <div class="invalid-feedback">{{ errors.offer_name }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="advertiser">Annonceur</label>
-                            <input class="form-control" id="advertiser" name="offer_advertiser"
-                                   value="{{ offer.offer_advertiser }}">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label" for="name">Nom</label>
+                                <input class="form-control {{ errors.offer_name is defined ? 'is-invalid' }}"
+                                       id="name" name="offer_name" value="{{ offer.offer_name }}">
+                                {% if errors.offer_name is defined %}
+                                    <div class="invalid-feedback">{{ errors.offer_name }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label" for="advertiser">Annonceur</label>
+                                <input class="form-control" id="advertiser" name="offer_advertiser"
+                                       value="{{ offer.offer_advertiser }}">
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label" for="type">Format</label>
                                 <select class="form-select" id="type" name="offer_type">
                                     <option value="banner" {{ offer.offer_type == 'banner' ? 'selected' }}>banner</option>
                                     <option value="coupon" {{ offer.offer_type == 'coupon' ? 'selected' }}>coupon</option>
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label" for="country">Pays</label>
-                                <input class="form-control" id="country" name="offer_country"
+                                <input class="form-control font-monospace" id="country" name="offer_country"
                                        value="{{ offer.offer_country }}" maxlength="2">
                             </div>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="active" name="offer_active"
-                                   value="1" {{ offer.offer_active ? 'checked' }}>
-                            <label class="form-check-label" for="active">Offre active</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="blank" name="offer_target_blank"
-                                   value="1" {{ offer.offer_target_blank ? 'checked' }}>
-                            <label class="form-check-label" for="blank">Ouvrir dans un nouvel onglet</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">Identifiants de regie</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="idv">idv — identifiant de crea</label>
-                            <input class="form-control {{ errors.offer_platform_idv is defined ? 'is-invalid' }}"
-                                   id="idv" name="offer_platform_idv" value="{{ offer.offer_platform_idv }}">
-                            {% if errors.offer_platform_idv is defined %}
-                                <div class="invalid-feedback">{{ errors.offer_platform_idv }}</div>
-                            {% endif %}
-                            <div class="form-text">
-                                Part dans l'URL de sortie et conditionne la diffusion : une offre sans
-                                <code>idv</code> n'est pas affichee.
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="ids">ids — identifiant de site</label>
-                                <input class="form-control" id="ids" name="offer_platform_ids"
-                                       value="{{ offer.offer_platform_ids }}">
-                                <div class="form-text">Vide = valeur du <code>.env</code>.</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="idc">idc — campagne</label>
-                                <input class="form-control {{ errors.offer_platform_idc is defined ? 'is-invalid' }}"
-                                       id="idc" name="offer_platform_idc"
-                                       value="{{ offer.offer_platform_idc }}">
-                                {% if errors.offer_platform_idc is defined %}
-                                    <div class="invalid-feedback">{{ errors.offer_platform_idc }}</div>
-                                {% endif %}
-                                <div class="form-text">
-                                    <strong>Cle de rapprochement des revenus.</strong> Le flux de reporting rend
-                                    ses lignes par <code>idc</code> : une erreur ici attribue le chiffre
-                                    d'affaires a une autre offre.
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="active" name="offer_active"
+                                           value="1" {{ offer.offer_active ? 'checked' }}>
+                                    <label class="form-check-label" for="active">Offre active</label>
+                                    <div class="form-text">
+                                        Inactive, elle disparaît du parcours de tous les concours auxquels
+                                        elle est rattachée, sans qu'on ait à les modifier.
+                                    </div>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="blank" name="offer_target_blank"
+                                           value="1" {{ offer.offer_target_blank ? 'checked' }}>
+                                    <label class="form-check-label" for="blank">Ouvrir dans un nouvel onglet</label>
+                                    <div class="form-text">
+                                        Nouvel onglet : le participant retrouve le parcours en fermant l'onglet.
+                                        Même onglet : il doit revenir en arrière, et beaucoup ne reviennent pas.
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header">Donnees transmises a l'annonceur</div>
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-key"></i> Identifiants de régie
+                        <span class="hint">— requis pour diffuser et pour être payé</span>
+                    </div>
                     <div class="card-body">
-                        <p class="form-text">
-                            Liste blanche. Par defaut, <strong>rien ne sort</strong> : n'ajoutez un champ que si
-                            l'annonceur l'a demande et que le concours le collecte.
-                        </p>
-                        {% for field in passthrough_fields %}
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="passthrough[]"
-                                       id="pt-{{ field }}" value="{{ field }}"
-                                       {{ field in selected_passthrough ? 'checked' }}>
-                                <label class="form-check-label" for="pt-{{ field }}"><code>{{ field }}</code></label>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="idv">
+                                    idv <span class="hint">— identifiant de créa</span>
+                                </label>
+                                <input class="form-control font-monospace {{ errors.offer_platform_idv is defined ? 'is-invalid' }}"
+                                       id="idv" name="offer_platform_idv" value="{{ offer.offer_platform_idv }}">
+                                {% if errors.offer_platform_idv is defined %}
+                                    <div class="invalid-feedback">{{ errors.offer_platform_idv }}</div>
+                                {% endif %}
+                                <div class="form-text {{ offer.offer_platform_idv ? '' : 'form-danger' }}">
+                                    Part dans l'URL de sortie et conditionne la diffusion :
+                                    <strong>une offre sans <code>idv</code> n'est jamais affichée</strong>.
+                                </div>
                             </div>
-                        {% endfor %}
+                            <div class="col-md-6">
+                                <label class="form-label" for="idc">
+                                    idc <span class="hint">— campagne</span>
+                                </label>
+                                <input class="form-control font-monospace {{ errors.offer_platform_idc is defined ? 'is-invalid' }}"
+                                       id="idc" name="offer_platform_idc" value="{{ offer.offer_platform_idc }}">
+                                {% if errors.offer_platform_idc is defined %}
+                                    <div class="invalid-feedback">{{ errors.offer_platform_idc }}</div>
+                                {% endif %}
+                                <div class="form-text {{ offer.offer_platform_idc ? 'form-warning' : 'form-danger' }}">
+                                    <strong>Clé de rapprochement des revenus.</strong> Le flux de reporting rend
+                                    ses lignes par <code>idc</code> : une erreur ici attribue le chiffre d'affaires
+                                    à une autre offre, et l'erreur ne se voit qu'à la facture.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="ids">
+                                    ids <span class="hint">— identifiant de site</span>
+                                </label>
+                                <input class="form-control font-monospace" id="ids" name="offer_platform_ids"
+                                       value="{{ offer.offer_platform_ids }}">
+                                <div class="form-text">Vide = valeur du <code>.env</code>.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-person-lock"></i> Données transmises à l'annonceur
+                        <span class="hint">— liste blanche</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="form-text mt-0 mb-3">
+                            Par défaut, <strong>rien ne sort</strong>. Cochez un champ seulement si l'annonceur
+                            l'a demandé <em>et</em> que le concours le collecte : chaque case ajoute une donnée
+                            personnelle dans l'URL de sortie, et cette sortie est définitive.
+                        </p>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for field in passthrough_fields %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="passthrough[]"
+                                           id="pt-{{ field }}" value="{{ field }}"
+                                           {{ field in selected_passthrough ? 'checked' }}>
+                                    <label class="form-check-label" for="pt-{{ field }}"><code>{{ field }}</code></label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <p class="form-text mb-0 mt-3">
+                            {% if selected_passthrough is empty %}
+                                <span class="badge text-bg-success"><i class="bi bi-shield-check"></i> aucune donnée transmise</span>
+                            {% else %}
+                                <span class="badge text-bg-warning"><i class="bi bi-shield-exclamation"></i>
+                                    {{ selected_passthrough|length }} champ(s) transmis</span>
+                                <code>{{ selected_passthrough|join(', ') }}</code>
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-6">
-                <div class="card mb-4">
-                    <div class="card-header">Rendu</div>
+            <div class="col-xl-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-window"></i> Rendu
+                        <span class="hint">— une offre, une page</span>
+                    </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="headline">Accroche</label>
-                            <input class="form-control" id="headline" name="offer_headline"
-                                   value="{{ offer.offer_headline }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="image">Fichier visuel</label>
-                            <input class="form-control" id="image" name="offer_image" value="{{ offer.offer_image }}">
-                            <div class="form-text">Depose dans <code>public/img/offers/</code>.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="cta">Libelle du bouton</label>
-                            <input class="form-control" id="cta" name="offer_cta_label" value="{{ offer.offer_cta_label }}">
-                        </div>
-                        <div class="mb-0">
-                            <label class="form-label" for="text_html">Texte (format coupon)</label>
-                            <textarea class="form-control" id="text_html" name="offer_text_html"
-                                      rows="4">{{ offer.offer_text_html }}</textarea>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="headline">
+                                    Accroche <span class="hint">— titre de la page d'offre</span>
+                                </label>
+                                <input class="form-control" id="headline" name="offer_headline"
+                                       value="{{ offer.offer_headline }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="image">
+                                    Visuel de l'offre
+                                    {% if offer.offer_image %}<span class="hint">— remplace l'actuel</span>{% endif %}
+                                </label>
+                                {% if offer.offer_id %}
+                                    <div class="media-field">
+                                        {% if offer.offer_image %}
+                                            <img class="media-thumb" src="/img/offers/{{ offer.offer_image }}?v={{ offer.updated_at|default('')|date('U') }}"
+                                                 alt="Visuel actuel de l'offre">
+                                        {% else %}
+                                            <span class="media-thumb media-thumb--empty"><i class="bi bi-image"></i></span>
+                                        {% endif %}
+                                        <div class="media-body">
+                                            <input class="form-control {{ errors.offer_image is defined ? 'is-invalid' }}"
+                                                   type="file" id="image" name="offer_image_file"
+                                                   accept="image/jpeg,image/png,image/gif,image/webp">
+                                            {% if errors.offer_image is defined %}
+                                                <div class="invalid-feedback d-block">{{ errors.offer_image }}</div>
+                                            {% endif %}
+                                            <div class="form-text">
+                                                {% if offer.offer_image %}
+                                                    Actuel : <code>{{ offer.offer_image }}</code>
+                                                    {% if offer.offer_image_width > 0 %}
+                                                        — <span class="num">{{ offer.offer_image_width }}
+                                                        × {{ offer.offer_image_height }}</span> px
+                                                    {% else %}
+                                                        — <span class="na">dimensions inconnues</span>, déposé avant la
+                                                        migration : re-téléversez-le, sinon la création repousse les
+                                                        boutons « accepter » et « refuser » au chargement.
+                                                    {% endif %}
+                                                {% else %}
+                                                    Aucun visuel : la page d'offre affichera l'accroche seule.
+                                                {% endif %}
+                                            </div>
+                                            <div class="form-text">
+                                                Le fichier fourni par la régie est réencodé et redimensionné à 1 200 px ;
+                                                une version WebP est écrite à côté. Ses dimensions réelles sont
+                                                enregistrées et déclarées à l'affichage.
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <p class="form-text mt-0">
+                                        Le visuel se téléverse une fois l'offre créée : le fichier est nommé d'après
+                                        son identifiant.
+                                    </p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label" for="cta">Libellé du bouton</label>
+                                <input class="form-control" id="cta" name="offer_cta_label" value="{{ offer.offer_cta_label }}">
+                                <div class="form-text">Refuser reste aussi visible qu'accepter.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="text_html">
+                                    Texte <span class="hint">— format coupon</span>
+                                </label>
+                                <textarea class="form-control" id="text_html" name="offer_text_html"
+                                          data-editor="rich"
+                                          rows="4">{{ offer.offer_text_html }}</textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header">Diffusion</div>
+                <div class="card mb-3">
+                    <div class="card-header"><i class="bi bi-speedometer"></i> Diffusion et plafonds</div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label" for="date_start">Debut</label>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label" for="date_start">Début</label>
                                 <input type="date" class="form-control" id="date_start" name="offer_date_start"
                                        value="{{ offer.offer_date_start }}">
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-6">
                                 <label class="form-label" for="date_end">Fin</label>
                                 <input type="date" class="form-control {{ errors.offer_date_end is defined ? 'is-invalid' }}"
                                        id="date_end" name="offer_date_end" value="{{ offer.offer_date_end }}">
@@ -159,46 +293,60 @@
                                     <div class="invalid-feedback">{{ errors.offer_date_end }}</div>
                                 {% endif %}
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-4 mb-3">
+                            <div class="col-4">
                                 <label class="form-label" for="cap_day">Plafond / jour</label>
-                                <input type="number" class="form-control" id="cap_day" name="offer_cap_day"
-                                       value="{{ offer.offer_cap_day }}">
+                                <input type="number" class="form-control num" id="cap_day" name="offer_cap_day"
+                                       value="{{ offer.offer_cap_day }}" placeholder="illimité">
                             </div>
-                            <div class="col-4 mb-3">
+                            <div class="col-4">
                                 <label class="form-label" for="cap_total">Plafond total</label>
-                                <input type="number" class="form-control" id="cap_total" name="offer_cap_total"
-                                       value="{{ offer.offer_cap_total }}">
+                                <input type="number" class="form-control num" id="cap_total" name="offer_cap_total"
+                                       value="{{ offer.offer_cap_total }}" placeholder="illimité">
                             </div>
-                            <div class="col-4 mb-3">
+                            <div class="col-4">
                                 <label class="form-label" for="weight">Poids (%)</label>
-                                <input type="number" class="form-control" id="weight" name="offer_weight"
+                                <input type="number" class="form-control num" id="weight" name="offer_weight"
                                        value="{{ offer.offer_weight }}">
                             </div>
-                        </div>
-                        <div class="form-text mb-0">
-                            Les plafonds sont verifies <strong>a l'affichage</strong> : une offre plafonnee
-                            disparait du bloc au lieu de consommer des impressions non payees.
+                            <div class="col-12">
+                                <p class="form-text mt-0 mb-0">
+                                    Les plafonds sont vérifiés <strong>à l'affichage</strong> : une offre plafonnée
+                                    disparaît du parcours au lieu de consommer des impressions non payées.
+                                    Un champ vide vaut « illimité », pas « zéro ».
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header">Ciblage</div>
-                    <div class="card-body">
-                        <p class="form-text">
-                            Une regle qu'on ne sait pas interpreter <strong>ecarte</strong> l'offre.
-                            Laissez vide pour diffuser a tous les participants.
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-funnel"></i> Ciblage
+                        <span class="hint">— vide = tous les participants</span>
+                    </div>
+                    <div class="card-body pb-0">
+                        <p class="form-text mt-0 mb-3 form-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Une règle qu'on ne sait pas interpréter <strong>écarte</strong> l'offre : elle ne
+                            s'affiche plus du tout, silencieusement. Laissez vide pour diffuser à tous.
                         </p>
-                        <table class="table table-sm" id="rules">
-                            <thead><tr><th>Champ</th><th>Operateur</th><th>Valeur</th></tr></thead>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" id="rules">
+                            <thead><tr><th>Champ</th><th>Opérateur</th><th>Valeur</th></tr></thead>
                             <tbody>
-                            {% for i in 0..4 %}
+                            {#
+                                Toujours au moins autant de lignes que de règles
+                                existantes, plus une vide : un tableau borné à
+                                cinq lignes supprimerait silencieusement la
+                                sixième règle au premier enregistrement.
+                            #}
+                            {% for i in 0..max(4, rules|length) %}
                                 {% set rule = rules[i]|default(null) %}
-                                <tr>
+                                <tr class="{{ rule ? '' : 'row-off' }}">
                                     <td>
-                                        <select class="form-select form-select-sm" name="rule_param[]">
+                                        <select class="form-select form-select-sm" name="rule_param[]"
+                                                aria-label="Champ de la règle {{ i + 1 }}">
                                             <option value="">—</option>
                                             {% for p in targeting_params %}
                                                 <option value="{{ p }}" {{ rule and rule.offer_targeting_param == p ? 'selected' }}>{{ p }}</option>
@@ -206,7 +354,8 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <select class="form-select form-select-sm" name="rule_operator[]">
+                                        <select class="form-select form-select-sm" name="rule_operator[]"
+                                                aria-label="Opérateur de la règle {{ i + 1 }}">
                                             <option value="">—</option>
                                             {% for op in targeting_operators %}
                                                 <option value="{{ op }}" {{ rule and rule.offer_targeting_operator == op ? 'selected' }}>{{ op }}</option>
@@ -214,8 +363,9 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <input class="form-control form-control-sm" name="rule_value[]"
-                                               value="{{ rule ? rule.offer_targeting_value : '' }}">
+                                        <input class="form-control form-control-sm font-monospace" name="rule_value[]"
+                                               value="{{ rule ? rule.offer_targeting_value : '' }}"
+                                               aria-label="Valeur de la règle {{ i + 1 }}">
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -227,26 +377,56 @@
         </div>
 
         {% if preview_url %}
-            <div class="card mb-4 border-info">
-                <div class="card-header bg-info-subtle">URL de sortie generee (participant fictif)</div>
+            {#
+                Prévisualisation de l'URL de sortie. C'est une pièce de
+                vérification, pas un lien : elle n'est pas cliquable, elle ne
+                porte pas de href, et aucun JavaScript ne s'y attache. Un clic
+                réel serait facturé à l'annonceur et compterait dans son
+                reporting. Copier est en revanche sans effet de bord.
+            #}
+            <div class="card mb-3 zone-caution">
+                <div class="card-header">
+                    <i class="bi bi-link-45deg"></i> URL de sortie générée
+                    <span class="hint">— participant fictif</span>
+                    <span class="no-open ms-auto"><i class="bi bi-hand-index-thumb"></i> Ne pas ouvrir</span>
+                </div>
                 <div class="card-body">
-                    <code class="url-preview">{{ preview_url }}</code>
-                    <p class="form-text mt-2 mb-0">
-                        ⛔ <strong>Ne pas ouvrir ce lien.</strong> Un clic reel est facture a l'annonceur et
-                        pollue le reporting. La verification se fait sur la chaine : <code>ids</code> et
-                        <code>idv</code> conformes a la regie, <code>sid</code> en quatre segments, chaque valeur
-                        encodee, et aucun champ hors liste blanche.
+                    <p class="mt-0 mb-2" style="font-size:var(--ts-fs-sm)">
+                        <strong>Ce n'est pas un lien.</strong> Ouvrir cette URL déclenche un clic réel :
+                        il est facturé à l'annonceur, compte dans son reporting, et fausse le CTR de l'offre.
+                        La vérification se fait <strong>à la lecture</strong>.
+                    </p>
+                    <code class="url-preview" id="preview-url">{{ preview_url }}</code>
+                    <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary btn-xs copy-btn"
+                                data-copy="{{ preview_url }}">
+                            <i class="bi bi-clipboard"></i> Copier</button>
+                        <span class="caution-note" style="max-width:60ch">
+                            Copier est sans effet de bord ; ouvrir ne l'est pas.
+                        </span>
+                    </div>
+                    <p class="form-text mt-3 mb-0">
+                        Ce qui doit être vrai à la lecture : <code>ids</code> et <code>idv</code> conformes
+                        à ceux de la régie · <code>sid</code> en quatre segments · chaque valeur encodée ·
+                        <strong>aucun champ hors liste blanche</strong> — s'il y a un prénom ou un e-mail ici,
+                        c'est qu'une case est cochée plus haut.
                     </p>
                 </div>
             </div>
         {% endif %}
 
-        <div class="mb-4">
-            <label class="form-label" for="notes">Notes internes</label>
-            <textarea class="form-control" id="notes" name="offer_notes" rows="2">{{ offer.offer_notes }}</textarea>
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-journal-text"></i> Notes internes</div>
+            <div class="card-body">
+                <label class="form-label visually-hidden" for="notes">Notes internes</label>
+                <textarea class="form-control" id="notes" name="offer_notes" rows="2"
+                          placeholder="Conditions négociées, contact chez l'annonceur, raison d'une mise en pause…">{{ offer.offer_notes }}</textarea>
+            </div>
         </div>
 
-        <button class="btn btn-primary" type="submit">Enregistrer</button>
-        <a class="btn btn-outline-secondary" href="/admin/offers">Retour</a>
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a class="btn btn-link" href="/admin/offers">Annuler</a>
+        </div>
     </form>
 {% endblock %}

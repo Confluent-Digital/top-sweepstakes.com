@@ -1,121 +1,312 @@
 {% extends 'admin/layout.html.twig' %}
-{% block title %}{{ sweepstake.sweepstake_id ? 'Editer un concours' : 'Nouveau concours' }}{% endblock %}
+{% block title %}{{ sweepstake.sweepstake_id ? 'Éditer un concours' : 'Nouveau concours' }}{% endblock %}
 
 {% block content %}
-    <h1 class="h4 mb-3">
-        {{ sweepstake.sweepstake_id ? sweepstake.sweepstake_name : 'Nouveau concours' }}
-    </h1>
-
-    {% if saved %}<div class="alert alert-success">Enregistre.</div>{% endif %}
-    {% if errors is not empty %}
-        <div class="alert alert-danger">Corrigez les champs signales ci-dessous.</div>
+    {#
+        Ce qui empêche la publication est calculé ici et rappelé en tête : la
+        fiche est longue, et le manque se trouve toujours dans la section qu'on
+        n'a pas déroulée.
+    #}
+    {#
+        Les mêmes conditions que `validateForPublication()`, montrées avant la
+        tentative d'enregistrement : la fiche est longue, et le manque se trouve
+        toujours dans la section qu'on n'a pas déroulée. L'autorité reste au
+        serveur — ce bloc ne fait qu'éviter l'aller-retour.
+    #}
+    {% set rules_text = sweepstake.sweepstake_official_rules_html|striptags|trim %}
+    {% set rules_lower = rules_text|lower %}
+    {% set missing = [] %}
+    {% if rules_text is empty %}
+        {% set missing = missing|merge([{'label': 'RÈGLES MANQUANTES', 'anchor': 'rules', 'why': 'Official Rules vides'}]) %}
+    {% elseif rules_text|length < 1500 %}
+        {% set missing = missing|merge([{'label': 'RÈGLES INCOMPLÈTES', 'anchor': 'rules', 'why': rules_text|length ~ ' caractères de texte, 1 500 attendus'}]) %}
+    {% else %}
+        {% for label, needle in {
+            'NO PURCHASE NECESSARY': 'no purchase necessary',
+            'AMOE': 'alternate method of entry',
+            'ODDS OF WINNING': 'odds of winning'
+        } %}
+            {% if needle not in rules_lower %}
+                {% set missing = missing|merge([{'label': label ~ ' ABSENT', 'anchor': 'rules', 'why': 'mention introuvable dans les règles'}]) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {% if not sweepstake.sweepstake_sponsor_name %}
+        {% set missing = missing|merge([{'label': 'SPONSOR MANQUANT', 'anchor': 'sponsor_name', 'why': 'obligatoire dans les règles et les e-mails'}]) %}
+    {% endif %}
+    {% if not sweepstake.sweepstake_sponsor_address %}
+        {% set missing = missing|merge([{'label': 'ADRESSE MANQUANTE', 'anchor': 'sponsor_address', 'why': "CAN-SPAM, et adresse de l'AMOE"}]) %}
+    {% endif %}
+    {% if not sweepstake.sweepstake_date_start %}
+        {% set missing = missing|merge([{'label': "DATE D'OUVERTURE MANQUANTE", 'anchor': 'date_start', 'why': "l'éligibilité d'un tirage ne se justifie pas"}]) %}
+    {% endif %}
+    {% if not sweepstake.sweepstake_date_end %}
+        {% set missing = missing|merge([{'label': 'DATE DE FIN MANQUANTE', 'anchor': 'date_end', 'why': 'sans elle, le concours collecte indéfiniment'}]) %}
     {% endif %}
 
-    <form method="post" action="/admin/sweepstakes/{{ sweepstake.sweepstake_id ?: 0 }}/edit">
+    <div class="page-head">
+        <div>
+            <a class="page-back" href="/admin/sweepstakes"><i class="bi bi-arrow-left"></i> Concours</a>
+            <h1 class="page-title">
+                {{ sweepstake.sweepstake_id ? sweepstake.sweepstake_name : 'Nouveau concours' }}
+            </h1>
+            <div class="page-sub">
+                {% if sweepstake.sweepstake_id %}
+                    <span class="badge badge-status-{{ sweepstake.sweepstake_status }}">{{ sweepstake.sweepstake_status }}</span>
+                    <code>/{{ sweepstake.sweepstake_slug }}</code> · fiche n° {{ sweepstake.sweepstake_id }}
+                {% else %}
+                    Le concours est créé en base : aucun fichier, aucun déploiement.
+                {% endif %}
+            </div>
+        </div>
+        <div class="page-actions">
+            {% if sweepstake.sweepstake_id and sweepstake.sweepstake_status == 'published' %}
+                <a class="btn btn-outline-secondary btn-sm" href="/{{ sweepstake.sweepstake_slug }}"
+                   target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Voir la landing</a>
+            {% endif %}
+            <button class="btn btn-primary btn-sm" type="submit" form="sweepstake-form">
+                <i class="bi bi-check-lg"></i> Enregistrer</button>
+        </div>
+    </div>
+
+    {% if saved %}
+        <div class="alert alert-success"><i class="bi bi-check-circle"></i> Enregistré.</div>
+    {% endif %}
+    {% if errors is not empty %}
+        <div class="alert alert-danger">
+            <strong><i class="bi bi-exclamation-triangle"></i> Rien n'a été enregistré.</strong>
+            Corrigez les champs signalés ci-dessous.
+        </div>
+    {% endif %}
+
+    {% if missing is not empty %}
+        <div class="alert {{ sweepstake.sweepstake_status == 'published' ? 'alert-danger' : 'alert-warning' }}">
+            <strong>
+                <i class="bi bi-exclamation-octagon"></i>
+                {% if sweepstake.sweepstake_status == 'published' %}
+                    Ce concours est en ligne alors qu'il lui manque des mentions obligatoires.
+                {% else %}
+                    Ce qui manque avant de passer en <code>published</code> :
+                {% endif %}
+            </strong>
+            <div class="mt-2 flag-stack">
+                {% for m in missing %}
+                    <a class="flag flag--bad text-decoration-none" href="#{{ m.anchor }}">
+                        {{ m.label }} <span class="flag-why">— {{ m.why }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# enctype obligatoire : sans lui le fichier n'arrive jamais au serveur et
+       rien ne le signale — le formulaire s'enregistre, le visuel reste l'ancien. #}
+    <form method="post" enctype="multipart/form-data" id="sweepstake-form"
+          action="/admin/sweepstakes/{{ sweepstake.sweepstake_id ?: 0 }}/edit">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 
-        <div class="row g-4">
-            <div class="col-lg-7">
-                <div class="card mb-4">
-                    <div class="card-header">Identite</div>
+        <div class="row g-3">
+            <div class="col-xl-7">
+
+                <div class="card mb-3">
+                    <div class="card-header"><i class="bi bi-card-heading"></i> Identité</div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="name">Nom interne</label>
-                            <input class="form-control {{ errors.sweepstake_name is defined ? 'is-invalid' }}"
-                                   id="name" name="sweepstake_name" value="{{ sweepstake.sweepstake_name }}">
-                            {% if errors.sweepstake_name is defined %}
-                                <div class="invalid-feedback">{{ errors.sweepstake_name }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label" for="slug">Slug (URL)</label>
-                            <input class="form-control {{ errors.sweepstake_slug is defined ? 'is-invalid' }}"
-                                   id="slug" name="sweepstake_slug" value="{{ sweepstake.sweepstake_slug }}">
-                            {% if errors.sweepstake_slug is defined %}
-                                <div class="invalid-feedback">{{ errors.sweepstake_slug }}</div>
-                            {% endif %}
-                            <div class="form-text">
-                                Le slug figure dans l'URL <strong>et</strong> dans le <code>sid</code> envoye a la
-                                regie. Le changer apres publication casse l'attribution des revenus deja collectes.
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label" for="name">Nom interne</label>
+                                <input class="form-control {{ errors.sweepstake_name is defined ? 'is-invalid' }}"
+                                       id="name" name="sweepstake_name" value="{{ sweepstake.sweepstake_name }}">
+                                {% if errors.sweepstake_name is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_name }}</div>
+                                {% endif %}
+                                <div class="form-text">Jamais affiché au participant.</div>
                             </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-5">
                                 <label class="form-label" for="status">Statut</label>
                                 <select class="form-select" id="status" name="sweepstake_status">
                                     {% for value in ['draft', 'published', 'paused', 'ended'] %}
                                         <option value="{{ value }}" {{ sweepstake.sweepstake_status == value ? 'selected' }}>{{ value }}</option>
                                     {% endfor %}
                                 </select>
+                                <div class="form-text">
+                                    <code>published</code> met la landing en ligne immédiatement.
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="min_age">Age minimum</label>
+
+                            <div class="col-12">
+                                <label class="form-label" for="slug">Slug (URL)</label>
+                                <input class="form-control font-monospace {{ errors.sweepstake_slug is defined ? 'is-invalid' }}"
+                                       id="slug" name="sweepstake_slug" value="{{ sweepstake.sweepstake_slug }}">
+                                {% if errors.sweepstake_slug is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_slug }}</div>
+                                {% endif %}
+                                <div class="form-text form-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Le slug figure dans l'URL <strong>et</strong> dans le <code>sid</code> envoyé à la
+                                    régie. Le changer après publication casse l'attribution des revenus déjà collectés.
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label" for="min_age">Âge minimum</label>
                                 <input type="number" class="form-control" id="min_age" name="sweepstake_min_age"
                                        value="{{ sweepstake.sweepstake_min_age }}" min="13" max="99">
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">Dotation</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="prize_title">Intitule</label>
-                            <input class="form-control" id="prize_title" name="sweepstake_prize_title"
-                                   value="{{ sweepstake.sweepstake_prize_title }}">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="prize_value">Valeur (ARV, $)</label>
-                                <input type="number" step="0.01" class="form-control" id="prize_value"
-                                       name="sweepstake_prize_value_usd" value="{{ sweepstake.sweepstake_prize_value_usd }}">
-                                <div class="form-text text-warning-emphasis">
-                                    Au-dela de 5 000 $, NY et FL imposent enregistrement et cautionnement.
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="prize_image">Fichier visuel</label>
-                                <input class="form-control" id="prize_image" name="sweepstake_prize_image"
-                                       value="{{ sweepstake.sweepstake_prize_image }}">
+                            <div class="col-md-8">
+                                <label class="form-label" for="offer_steps">Offres après le formulaire</label>
+                                <input type="number" class="form-control" id="offer_steps" name="sweepstake_offer_steps"
+                                       value="{{ sweepstake.sweepstake_offer_steps }}" min="0" max="12">
                                 <div class="form-text">
-                                    Depose dans <code>public/img/sweepstakes/{{ sweepstake.sweepstake_id ?: 'ID' }}/</code>
+                                    Une offre par page. Plus d'offres augmente le revenu par participation
+                                    jusqu'au point où la fatigue fait abandonner ; ce point se mesure dans
+                                    <a href="/admin/stats/offers">les stats</a>. <code>0</code> désactive le parcours.
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header">Champs du formulaire</div>
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-gift"></i> Dotation
+                        <span class="hint">— c'est elle que le visiteur lit en premier</span>
+                    </div>
                     <div class="card-body">
-                        <p class="form-text mb-3">
-                            Chaque champ coche doit avoir un usage : un champ collecte et jamais exploite
-                            coute des participants a la saisie et cree une obligation de conservation.
-                        </p>
-                        {% set active_keys = {} %}
-                        {% for f in fields %}
-                            {% set active_keys = active_keys|merge({(f.sweepstake_field_key): f}) %}
-                        {% endfor %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="prize_title">Intitulé</label>
+                                <input class="form-control" id="prize_title" name="sweepstake_prize_title"
+                                       value="{{ sweepstake.sweepstake_prize_title }}">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label" for="prize_value">Valeur (ARV, $)</label>
+                                <input type="number" step="0.01" class="form-control num" id="prize_value"
+                                       name="sweepstake_prize_value_usd" value="{{ sweepstake.sweepstake_prize_value_usd }}">
+                                {% if sweepstake.sweepstake_prize_value_usd >= 5000 %}
+                                    <div class="form-text form-warning">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        Au-delà de 5 000 $, NY et FL imposent enregistrement et cautionnement.
+                                    </div>
+                                {% else %}
+                                    <div class="form-text">
+                                        Au-delà de 5 000 $, NY et FL imposent enregistrement et cautionnement.
+                                        Cette valeur est reprise telle quelle dans les Official Rules.
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label" for="prize_image">
+                                    Visuel de dotation
+                                    {% if sweepstake.sweepstake_prize_image %}<span class="hint">— remplace l'actuel</span>{% endif %}
+                                </label>
+                                {% if sweepstake.sweepstake_id %}
+                                    <div class="media-field">
+                                        {% if sweepstake.sweepstake_prize_image %}
+                                            <img class="media-thumb"
+                                                 src="/img/sweepstakes/{{ sweepstake.sweepstake_id }}/{{ sweepstake.sweepstake_prize_image }}?v={{ sweepstake.updated_at|default('')|date('U') }}"
+                                                 alt="Visuel actuel de la dotation">
+                                        {% else %}
+                                            <span class="media-thumb media-thumb--empty"><i class="bi bi-image"></i></span>
+                                        {% endif %}
+                                        <div class="media-body">
+                                            <input class="form-control {{ errors.prize_image is defined ? 'is-invalid' }}"
+                                                   type="file" id="prize_image" name="prize_image"
+                                                   accept="image/jpeg,image/png,image/gif,image/webp">
+                                            {% if errors.prize_image is defined %}
+                                                <div class="invalid-feedback d-block">{{ errors.prize_image }}</div>
+                                            {% endif %}
+                                            <div class="form-text">
+                                                {% if sweepstake.sweepstake_prize_image %}
+                                                    Actuel : <code>{{ sweepstake.sweepstake_prize_image }}</code>
+                                                    {% if sweepstake.sweepstake_prize_image_width > 0 %}
+                                                        — <span class="num">{{ sweepstake.sweepstake_prize_image_width }}
+                                                        × {{ sweepstake.sweepstake_prize_image_height }}</span> px
+                                                    {% else %}
+                                                        — <span class="na">dimensions inconnues</span>, déposé avant la
+                                                        migration : re-téléversez-le pour que la landing puisse réserver
+                                                        sa place.
+                                                    {% endif %}
+                                                {% else %}
+                                                    Aucun visuel. La landing tient sans, mais la dotation se comprend
+                                                    plus vite en image qu'en texte.
+                                                {% endif %}
+                                            </div>
+                                            <div class="form-text">
+                                                JPEG, PNG, GIF ou WebP, 8 Mo maximum. Le fichier est réencodé et
+                                                redimensionné à 1 200 px, une version WebP est écrite à côté, et
+                                                <strong>ses dimensions réelles sont enregistrées</strong> — c'est ce qui
+                                                empêche le bouton de se déplacer au chargement.
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <p class="form-text mt-0">
+                                        Le visuel se téléverse une fois le concours créé : le fichier est rangé dans
+                                        un dossier portant son identifiant.
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                        <table class="table table-sm">
-                            <thead><tr><th>Champ</th><th>Actif</th><th>Etape</th><th>Obligatoire</th></tr></thead>
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-check2-circle"></i> Page de remerciement
+                        <span class="hint">— affichée une fois le parcours d'offres terminé</span>
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label visually-hidden" for="thankyou">Page de remerciement (HTML)</label>
+                        <textarea class="form-control" id="thankyou" name="sweepstake_thankyou_html"
+                                  data-editor="rich"
+                                  rows="3">{{ sweepstake.sweepstake_thankyou_html }}</textarea>
+                        <div class="form-text">
+                            Ce champ est enregistré avec le reste de la fiche. Laissé hors du formulaire,
+                            il serait vidé à chaque enregistrement.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-input-cursor-text"></i> Champs du formulaire
+                        <span class="hint">— deux étapes, un champ par ligne côté visiteur</span>
+                    </div>
+                    <div class="card-body pb-0">
+                        <p class="form-text mb-3">
+                            Chaque champ coché doit avoir un usage : un champ collecté et jamais exploité
+                            coûte des participants à la saisie et crée une obligation de conservation.
+                        </p>
+                    </div>
+                    {% set active_keys = {} %}
+                    {% for f in fields %}
+                        {% set active_keys = active_keys|merge({(f.sweepstake_field_key): f}) %}
+                    {% endfor %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead><tr>
+                                <th style="width:2.5rem">Actif</th><th>Champ</th>
+                                <th style="width:6rem">Étape</th><th style="width:7rem">Obligatoire</th>
+                            </tr></thead>
                             <tbody>
                             {% for key in field_keys %}
                                 {% set f = active_keys[key]|default(null) %}
-                                <tr>
-                                    <td><code>{{ key }}</code></td>
-                                    <td><input type="checkbox" name="field_active[{{ key }}]" value="1" {{ f ? 'checked' }}></td>
+                                <tr class="{{ f ? '' : 'row-off' }}">
+                                    <td><input class="form-check-input" type="checkbox"
+                                               name="field_active[{{ key }}]" value="1" {{ f ? 'checked' }}
+                                               aria-label="Activer le champ {{ key }}"></td>
+                                    <td class="cell-key"><code>{{ key }}</code></td>
                                     <td>
-                                        <select class="form-select form-select-sm" name="field_step[{{ key }}]">
+                                        <select class="form-select form-select-sm" name="field_step[{{ key }}]"
+                                                aria-label="Étape du champ {{ key }}">
                                             <option value="1" {{ f and f.sweepstake_field_step == 1 ? 'selected' }}>1</option>
                                             <option value="2" {{ f and f.sweepstake_field_step == 2 ? 'selected' }}>2</option>
                                         </select>
                                     </td>
-                                    <td><input type="checkbox" name="field_required[{{ key }}]" value="1"
-                                               {{ f and f.sweepstake_field_required ? 'checked' }}></td>
+                                    <td><input class="form-check-input" type="checkbox"
+                                               name="field_required[{{ key }}]" value="1"
+                                               {{ f and f.sweepstake_field_required ? 'checked' }}
+                                               aria-label="Rendre le champ {{ key }} obligatoire"></td>
                                 </tr>
                             {% endfor %}
                             </tbody>
@@ -124,45 +315,60 @@
                 </div>
             </div>
 
-            <div class="col-lg-5">
-                <div class="card mb-4">
-                    <div class="card-header">Conformite</div>
+            <div class="col-xl-5">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-shield-check"></i> Conformité
+                        <span class="hint">— bloque la publication</span>
+                    </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="sponsor_name">Sponsor</label>
-                            <input class="form-control {{ errors.sweepstake_sponsor_name is defined ? 'is-invalid' }}"
-                                   id="sponsor_name" name="sweepstake_sponsor_name" value="{{ sweepstake.sweepstake_sponsor_name }}">
-                            {% if errors.sweepstake_sponsor_name is defined %}
-                                <div class="invalid-feedback">{{ errors.sweepstake_sponsor_name }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="sponsor_address">Adresse postale (CAN-SPAM)</label>
-                            <input class="form-control" id="sponsor_address" name="sweepstake_sponsor_address"
-                                   value="{{ sweepstake.sweepstake_sponsor_address }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="disclaimer">Disclaimer de marque</label>
-                            <textarea class="form-control" id="disclaimer" name="sweepstake_brand_disclaimer"
-                                      rows="2">{{ sweepstake.sweepstake_brand_disclaimer }}</textarea>
-                            <div class="form-text">Obligatoire des que la dotation porte une marque tierce.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="excluded">Etats exclus</label>
-                            <input class="form-control" id="excluded" name="sweepstake_excluded_states"
-                                   value="{{ sweepstake.sweepstake_excluded_states }}" placeholder="NY,FL">
-                            <div class="form-text">
-                                C'est <strong>cette</strong> liste qui refuse le participant. Elle doit dire
-                                exactement la meme chose que les Official Rules.
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="sponsor_name">Sponsor</label>
+                                <input class="form-control {{ errors.sweepstake_sponsor_name is defined ? 'is-invalid' }}"
+                                       id="sponsor_name" name="sweepstake_sponsor_name" value="{{ sweepstake.sweepstake_sponsor_name }}">
+                                {% if errors.sweepstake_sponsor_name is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_sponsor_name }}</div>
+                                {% endif %}
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label" for="date_start">Debut</label>
-                                <input type="date" class="form-control" id="date_start"
+                            <div class="col-12">
+                                <label class="form-label" for="sponsor_address">
+                                    Adresse postale <span class="hint">— CAN-SPAM</span>
+                                </label>
+                                <input class="form-control {{ errors.sweepstake_sponsor_address is defined ? 'is-invalid' }}"
+                                       id="sponsor_address" name="sweepstake_sponsor_address"
+                                       value="{{ sweepstake.sweepstake_sponsor_address }}">
+                                {% if errors.sweepstake_sponsor_address is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_sponsor_address }}</div>
+                                {% endif %}
+                                <div class="form-text">Affichée en pied de landing et dans chaque e-mail.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="disclaimer">Disclaimer de marque</label>
+                                <textarea class="form-control" id="disclaimer" name="sweepstake_brand_disclaimer"
+                                          rows="2">{{ sweepstake.sweepstake_brand_disclaimer }}</textarea>
+                                <div class="form-text">Obligatoire dès que la dotation porte une marque tierce.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="excluded">États exclus</label>
+                                <input class="form-control font-monospace" id="excluded" name="sweepstake_excluded_states"
+                                       value="{{ sweepstake.sweepstake_excluded_states }}" placeholder="NY,FL">
+                                <div class="form-text form-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    C'est <strong>cette</strong> liste qui refuse le participant. Elle doit dire
+                                    exactement la même chose que les Official Rules ci-dessous.
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="date_start">Début</label>
+                                <input type="date" class="form-control {{ errors.sweepstake_date_start is defined ? 'is-invalid' }}"
+                                       id="date_start"
                                        name="sweepstake_date_start" value="{{ sweepstake.sweepstake_date_start }}">
+                                {% if errors.sweepstake_date_start is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_date_start }}</div>
+                                {% endif %}
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-6">
                                 <label class="form-label" for="date_end">Fin</label>
                                 <input type="date" class="form-control {{ errors.sweepstake_date_end is defined ? 'is-invalid' }}"
                                        id="date_end" name="sweepstake_date_end" value="{{ sweepstake.sweepstake_date_end }}">
@@ -170,84 +376,178 @@
                                     <div class="invalid-feedback">{{ errors.sweepstake_date_end }}</div>
                                 {% endif %}
                             </div>
-                        </div>
-                        <div class="mb-0">
-                            <label class="form-label" for="rules">Official Rules (HTML)</label>
-                            <textarea class="form-control {{ errors.sweepstake_official_rules_html is defined ? 'is-invalid' }}"
-                                      id="rules" name="sweepstake_official_rules_html"
-                                      rows="10">{{ sweepstake.sweepstake_official_rules_html }}</textarea>
-                            {% if errors.sweepstake_official_rules_html is defined %}
-                                <div class="invalid-feedback">{{ errors.sweepstake_official_rules_html }}</div>
-                            {% endif %}
-                            <div class="form-text">
-                                Mentions obligatoires : NO PURCHASE NECESSARY, AMOE, sponsor et adresse, dates,
-                                eligibilite et Etats exclus, ARV, probabilites, selection et publication des gagnants.
+                            <div class="col-12">
+                                <label class="form-label" for="rules">Official Rules (HTML)</label>
+                                <textarea class="form-control {{ errors.sweepstake_official_rules_html is defined ? 'is-invalid' }}"
+                                          id="rules" name="sweepstake_official_rules_html"
+                                          data-editor="rich" data-min-height="420px"
+                                          rows="12">{{ sweepstake.sweepstake_official_rules_html }}</textarea>
+                                {% if errors.sweepstake_official_rules_html is defined %}
+                                    <div class="invalid-feedback">{{ errors.sweepstake_official_rules_html }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Mentions obligatoires, aucune facultative :
+                                    NO PURCHASE NECESSARY · AMOE · sponsor et adresse · dates ·
+                                    éligibilité et États exclus · ARV · probabilités ·
+                                    sélection et publication des gagnants.
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header">Theme &amp; SEO</div>
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-palette"></i> Thème &amp; SEO
+                        <span class="hint">— le thème vient d'ici, jamais d'une feuille par concours</span>
+                    </div>
                     <div class="card-body">
-                        <div class="row">
-                            {% for key, label in {'primary': 'Primaire', 'accent': 'Accent', 'background': 'Fond'} %}
-                                <div class="col-4 mb-3">
+                        <div class="row g-3">
+                            {#
+                                Les cinq clés du thème sont exposées, pas trois :
+                                le contrôleur reconstruit le thème à partir des
+                                seuls champs envoyés, donc un champ absent de ce
+                                formulaire est effacé en base au premier
+                                enregistrement, sans que rien ne le signale.
+                            #}
+                            {% for key, label in {'primary': 'Primaire', 'accent': 'Accent', 'text': 'Texte', 'background': 'Fond', 'surface': 'Surface'} %}
+                                {% set value = theme[key]|default('') %}
+                                <div class="col-6 col-md-4">
                                     <label class="form-label" for="theme_{{ key }}">{{ label }}</label>
-                                    <input type="text" class="form-control form-control-sm" id="theme_{{ key }}"
-                                           name="theme_{{ key }}" value="{{ theme[key]|default('') }}" placeholder="#1b4dff">
+                                    <div class="swatch-row">
+                                        {#
+                                            La pastille montre ce que verra le visiteur. C'est la
+                                            seule couleur littérale de l'écran, et elle vient de la
+                                            base ; on ne l'affiche que si elle est bien une couleur.
+                                        #}
+                                        {% if value matches '/^#[0-9a-fA-F]{3,8}$/' %}
+                                            <span class="swatch" style="background:{{ value }}" aria-hidden="true"></span>
+                                        {% else %}
+                                            <span class="swatch" aria-hidden="true"></span>
+                                        {% endif %}
+                                        <input type="text" class="form-control form-control-sm font-monospace"
+                                               id="theme_{{ key }}" name="theme_{{ key }}"
+                                               value="{{ value }}" placeholder="#1b4dff">
+                                    </div>
                                 </div>
                             {% endfor %}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="meta_title">Titre SEO</label>
-                            <input class="form-control" id="meta_title" name="sweepstake_meta_title"
-                                   value="{{ sweepstake.sweepstake_meta_title }}">
-                        </div>
-                        <div class="mb-0">
-                            <label class="form-label" for="meta_description">Description SEO</label>
-                            <textarea class="form-control" id="meta_description"
-                                      name="sweepstake_meta_description" rows="2">{{ sweepstake.sweepstake_meta_description }}</textarea>
+                            <div class="col-12">
+                                <p class="form-text mt-0 mb-0">
+                                    Ces cinq valeurs arrivent en variables CSS dans le gabarit unique :
+                                    il n'y a ni feuille ni classe par concours. Vérifiez le contraste du
+                                    texte sur le fond — un même gabarit doit rester lisible en bleu
+                                    Amazon comme en jaune Walmart.
+                                </p>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="meta_title">Titre SEO</label>
+                                <input class="form-control" id="meta_title" name="sweepstake_meta_title"
+                                       value="{{ sweepstake.sweepstake_meta_title }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="meta_description">Description SEO</label>
+                                <textarea class="form-control" id="meta_description"
+                                          name="sweepstake_meta_description" rows="2">{{ sweepstake.sweepstake_meta_description }}</textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <button class="btn btn-primary" type="submit">Enregistrer</button>
-        <a class="btn btn-outline-secondary" href="/admin/sweepstakes">Retour</a>
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a class="btn btn-link" href="/admin/sweepstakes">Annuler</a>
+        </div>
     </form>
 
     {% if sweepstake.sweepstake_id %}
-        <hr class="my-4">
-        <div class="card">
-            <div class="card-header">Offres rattachees</div>
-            <div class="card-body">
-                <form method="post" action="/admin/sweepstakes/{{ sweepstake.sweepstake_id }}/offers">
-                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    {% set attached_ids = attached_offers|map(o => o.sweepstake_offer_id_offer) %}
-                    {% for offer in all_offers %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="offer_ids[]"
-                                   id="offer-{{ offer.offer_id }}" value="{{ offer.offer_id }}"
-                                   {{ offer.offer_id in attached_ids ? 'checked' }}>
-                            <label class="form-check-label" for="offer-{{ offer.offer_id }}">
-                                {{ offer.offer_name }}
-                                {% if not offer.offer_active %}<span class="badge bg-secondary">inactive</span>{% endif %}
-                                {% if not offer.offer_platform_idv %}
-                                    <span class="badge bg-danger">idv manquant</span>
-                                {% endif %}
-                                <span class="text-muted small">eCPM 15 j : {{ offer.offer_ecpm_15d }}</span>
-                            </label>
-                        </div>
-                    {% else %}
-                        <p class="empty mb-0">Aucune offre. <a href="/admin/offers/new">Creez-en une</a>.</p>
-                    {% endfor %}
+        {#
+            Le rattachement des offres est un formulaire distinct : il s'enregistre
+            seul, et le mélanger au précédent ferait perdre l'un en enregistrant
+            l'autre.
+        #}
+        <form method="post" action="/admin/sweepstakes/{{ sweepstake.sweepstake_id }}/offers">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="card card-table mb-4">
+                <div class="card-header">
+                    <i class="bi bi-badge-ad"></i> Offres rattachées
+                    <span class="hint">— présentées une par page, dans l'ordre de l'eCPM</span>
                     {% if all_offers is not empty %}
-                        <button class="btn btn-primary mt-3" type="submit">Enregistrer les offres</button>
+                        <button class="btn btn-primary btn-xs ms-auto" type="submit">
+                            <i class="bi bi-check-lg"></i> Enregistrer les offres</button>
                     {% endif %}
-                </form>
+                </div>
+                {% if all_offers is empty %}
+                    {% include 'admin/_blank.html.twig' with {
+                        'icon': 'badge-ad',
+                        'title': 'Aucune offre à rattacher',
+                        'text': "Le parcours d'offres est ce qui rémunère une participation. Une offre porte ses identifiants de régie, son ciblage et ses plafonds ; elle est ensuite rattachable à autant de concours qu'on veut.",
+                        'cta_url': '/admin/offers/new',
+                        'cta_label': 'Créer une offre',
+                        'cta_icon': 'plus-lg'
+                    } only %}
+                {% else %}
+                    {% set attached_ids = attached_offers|map(o => o.sweepstake_offer_id_offer) %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr>
+                                <th style="width:2.5rem">Liée</th><th>Offre</th><th>Diffusion</th>
+                                <th class="num">eCPM 15 j</th>
+                            </tr></thead>
+                            <tbody>
+                            {% for offer in all_offers %}
+                                {% set never_shown = not offer.offer_platform_idv or not offer.offer_active %}
+                                <tr class="{{ not offer.offer_platform_idv ? 'row-bad' : (not offer.offer_platform_idc ? 'row-warn' : '') }}">
+                                    <td>
+                                        <input class="form-check-input" type="checkbox" name="offer_ids[]"
+                                               id="offer-{{ offer.offer_id }}" value="{{ offer.offer_id }}"
+                                               {{ offer.offer_id in attached_ids ? 'checked' }}>
+                                    </td>
+                                    <td class="cell-key">
+                                        <label class="form-check-label" for="offer-{{ offer.offer_id }}">{{ offer.offer_name }}</label>
+                                        {% if offer.offer_advertiser %}
+                                            <span class="cell-meta">· {{ offer.offer_advertiser }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="flag-stack">
+                                            {% if offer.offer_active %}
+                                                <span class="badge text-bg-success">active</span>
+                                            {% else %}
+                                                <span class="badge text-bg-secondary">inactive</span>
+                                            {% endif %}
+                                            {% if not offer.offer_platform_idv %}
+                                                <span class="flag flag--bad" title="Sans idv, l'URL de sortie est incomplète : l'offre n'est jamais affichée dans le parcours.">
+                                                    IDV MANQUANT <span class="flag-why">— jamais affichée</span></span>
+                                            {% endif %}
+                                            {% if not offer.offer_platform_idc %}
+                                                <span class="flag flag--warn" title="Le flux de reporting rend ses lignes par idc : sans idc, le revenu de cette offre n'est rattaché à rien.">
+                                                    IDC MANQUANT <span class="flag-why">— revenu non rattaché</span></span>
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="num">
+                                        {% if never_shown %}
+                                            <span class="na">ne sortira pas</span>
+                                        {% else %}
+                                            {{ offer.offer_ecpm_15d }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary btn-sm" type="submit">
+                            <i class="bi bi-check-lg"></i> Enregistrer les offres</button>
+                        <span class="form-text ms-2">
+                            Décocher une offre la retire du parcours de ce concours ; elle reste disponible ailleurs.
+                        </span>
+                    </div>
+                {% endif %}
             </div>
-        </div>
+        </form>
     {% endif %}
 {% endblock %}

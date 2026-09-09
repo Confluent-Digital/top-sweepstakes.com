@@ -1,0 +1,39 @@
+{#
+    Visuel du tunnel — un seul rendu pour la dotation et pour les offres.
+
+    Deux choses s'y jouent, et elles se paient toutes les deux au clic :
+
+    1. **Les dimensions sont celles du fichier réel** (`*_image_width` /
+       `*_image_height`, renseignées au téléversement). Elles étaient écrites en
+       dur : un visuel portrait était rendu plus haut que la place réservée, et
+       le bouton descendait APRÈS le chargement de l'image — au moment précis où
+       le visiteur vise. Les visuels déposés avant la migration ont des
+       dimensions à 0 : on retombe alors sur un rapport déclaré, qui borne le
+       déplacement à défaut de l'annuler.
+
+    2. **Le WebP n'est proposé que s'il existe.** Le téléversement écrit
+       `<base>.webp` à côté du repli, mais pas pour les fichiers antérieurs, et
+       pas si GD est compilé sans WebP. Un <source> qui pointe dans le vide fait
+       afficher un cadre cassé.
+
+    Paramètres : src (chemin sous public/), alt, width, height,
+                 ratio_w, ratio_h (repli quand les dimensions valent 0),
+                 class, priority (booléen).
+#}
+{% set w = width|default(0) %}
+{% set h = height|default(0) %}
+{% set known = w > 0 and h > 0 %}
+{% set out_w = known ? w : ratio_w|default(440) %}
+{% set out_h = known ? h : ratio_h|default(280) %}
+{# Le service écrit le WebP à côté du repli, même nom de base. #}
+{% set webp = src|replace({'.jpg': '.webp', '.jpeg': '.webp', '.png': '.webp', '.gif': '.webp'}) %}
+
+<picture>
+    {% if public_file_exists(webp) %}
+        <source srcset="{{ webp }}" type="image/webp">
+    {% endif %}
+    <img class="{{ class|default('') }}" src="{{ src }}" alt="{{ alt }}"
+         width="{{ out_w }}" height="{{ out_h }}"
+         {% if priority|default(false) %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}
+         decoding="async">
+</picture>

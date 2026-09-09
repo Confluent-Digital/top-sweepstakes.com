@@ -11,6 +11,7 @@ RUN docker-php-ext-install -j"$(nproc)" pdo_mysql mysqli bcmath \
 # L'entrypoint de l'image de base chmod des chemins propres aux landing pages
 # (public/__gestion/config, src/Controllers/user) qui n'existent pas ici : avec
 # `set -e` il sortirait en erreur avant meme de lancer php-fpm.
+COPY uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
 COPY entrypoint.sh /usr/local/bin/topsweepstakes-entrypoint.sh
 RUN chmod +x /usr/local/bin/topsweepstakes-entrypoint.sh
 

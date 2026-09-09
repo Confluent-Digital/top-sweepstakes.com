@@ -2,97 +2,184 @@
 {% block title %}Participants{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0">Participants</h1>
-        <a class="btn btn-outline-secondary"
-           href="/admin/leads/export?{{ filters|url_encode }}">Exporter en CSV</a>
+    {% set active_filters = [] %}
+    {% if filters.sweepstake_id %}{% set active_filters = active_filters|merge(['concours']) %}{% endif %}
+    {% if filters.email %}{% set active_filters = active_filters|merge(['e-mail']) %}{% endif %}
+    {% if filters.state %}{% set active_filters = active_filters|merge(['état']) %}{% endif %}
+    {% if filters.subid %}{% set active_filters = active_filters|merge(['subid']) %}{% endif %}
+    {% if filters.from or filters.to %}{% set active_filters = active_filters|merge(['période']) %}{% endif %}
+
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Participants</h1>
+            <div class="page-sub">Données personnelles — consultation tracée, export tracé</div>
+        </div>
+        <div class="page-actions caution-inline">
+            {#
+                Export de données personnelles : l'action est tracée dans le
+                journal d'administration, elle porte sur le jeu filtré (pas sur
+                la page), et le fichier produit sort du périmètre de l'outil.
+                L'avertissement est à côté du bouton, pas dans une note de bas
+                d'écran qu'on ne lit qu'après.
+            #}
+            {% if total > 0 %}
+                <span class="caution-note">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Le fichier contient e-mails, téléphones et adresses en clair, et sort de l'outil.
+                    L'export est tracé et porte sur les
+                    <strong>{{ total|number_format(0, ',', ' ') }}</strong> lignes filtrées.
+                </span>
+                <a class="btn btn-caution btn-sm" href="/admin/leads/export?{{ filters|url_encode }}"
+                   data-confirm="Exporter {{ total }} participant(s) en clair ? Le fichier contient des données personnelles et sort de l'outil. L'export est journalisé.">
+                    <i class="bi bi-download"></i> Exporter en CSV
+                </a>
+            {% else %}
+                {# Rien à exporter : le bouton reste visible pour ne pas se déplacer
+                   d'un écran à l'autre, mais il est inerte — un export vide n'en
+                   est pas moins journalisé comme un accès aux données. #}
+                <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true"
+                      title="Aucune ligne à exporter avec ces filtres">
+                    <i class="bi bi-download"></i> Exporter en CSV
+                </span>
+            {% endif %}
+        </div>
     </div>
 
-    <form method="get" action="/admin/leads" class="card card-body mb-3">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label" for="f-sweepstake">Concours</label>
-                <select class="form-select form-select-sm" id="f-sweepstake" name="sweepstake_id">
+    <form method="get" action="/admin/leads" class="card card-body py-2 mb-3">
+        <div class="filter-bar">
+            <label class="filter">
+                <span class="filter-label">Concours</span>
+                <select class="form-select" name="sweepstake_id">
                     <option value="">Tous</option>
                     {% for s in sweepstakes %}
                         <option value="{{ s.sweepstake_id }}"
                                 {{ filters.sweepstake_id == s.sweepstake_id ? 'selected' }}>{{ s.sweepstake_name }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label" for="f-email">E-mail</label>
-                <input class="form-control form-control-sm" id="f-email" name="email" value="{{ filters.email }}">
-            </div>
-            <div class="col-md-1">
-                <label class="form-label" for="f-state">Etat</label>
-                <input class="form-control form-control-sm" id="f-state" name="state"
-                       value="{{ filters.state }}" maxlength="2">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label" for="f-subid">subid</label>
-                <input class="form-control form-control-sm" id="f-subid" name="subid" value="{{ filters.subid }}">
-            </div>
-            <div class="col-md-1">
-                <label class="form-label" for="f-from">Du</label>
-                <input type="date" class="form-control form-control-sm" id="f-from" name="from" value="{{ filters.from }}">
-            </div>
-            <div class="col-md-1">
-                <label class="form-label" for="f-to">Au</label>
-                <input type="date" class="form-control form-control-sm" id="f-to" name="to" value="{{ filters.to }}">
-            </div>
-            <div class="col-md-1">
-                <button class="btn btn-primary btn-sm w-100" type="submit">Filtrer</button>
-            </div>
+            </label>
+            <label class="filter filter--w9">
+                <span class="filter-label">E-mail</span>
+                <input class="form-control" name="email" value="{{ filters.email }}" placeholder="contient…">
+            </label>
+            <label class="filter filter--w4">
+                <span class="filter-label">État</span>
+                <input class="form-control" name="state" value="{{ filters.state }}" maxlength="2" placeholder="NY">
+            </label>
+            <label class="filter filter--w6">
+                <span class="filter-label">subid</span>
+                <input class="form-control" name="subid" value="{{ filters.subid }}">
+            </label>
+            <label class="filter">
+                <span class="filter-label">Du</span>
+                <input type="date" class="form-control" name="from" value="{{ filters.from }}">
+            </label>
+            <label class="filter">
+                <span class="filter-label">Au</span>
+                <input type="date" class="form-control" name="to" value="{{ filters.to }}">
+            </label>
+            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+            {% if active_filters is not empty %}
+                <a class="btn btn-link btn-sm" href="/admin/leads">Tout effacer</a>
+            {% endif %}
         </div>
     </form>
 
-    {# Le total porte sur le jeu filtre, pas sur la page affichee. #}
-    <p class="text-muted small">
-        {{ total|number_format(0, ',', ' ') }} participant(s) correspondant aux filtres
-        {% if pages > 1 %} — page {{ page }} sur {{ pages }}{% endif %}
-    </p>
+    {# Le total porte sur le jeu filtré, jamais sur la page affichée : l'écran
+       le dit, sinon un opérateur lit le compte de la page comme un volume. #}
+    <div class="scope-note">
+        <span class="scope-count">{{ total|number_format(0, ',', ' ') }}</span>
+        <span>
+            participant(s)
+            {% if active_filters is empty %}
+                — <strong>aucun filtre</strong>, base entière
+            {% else %}
+                correspondant aux filtres actifs ({{ active_filters|join(', ') }})
+            {% endif %}
+        </span>
+        {% if pages > 1 %}
+            <span class="scope-page">Page {{ page }} sur {{ pages }} — {{ leads|length }} ligne(s) affichée(s)</span>
+        {% endif %}
+    </div>
 
     {% if leads is empty %}
-        <div class="card card-body empty">Aucun participant ne correspond a ces filtres.</div>
-    {% else %}
         <div class="card">
-            <table class="table table-sm mb-0 align-middle">
-                <thead>
-                <tr><th>#</th><th>Date</th><th>E-mail</th><th>Nom</th><th>Etat</th>
-                    <th>Concours</th><th>subid</th><th>Appareil</th><th></th></tr>
-                </thead>
-                <tbody>
-                {% for l in leads %}
-                    <tr>
-                        <td>{{ l.lead_id }}</td>
-                        <td class="small text-nowrap">{{ l.created_at }}</td>
-                        <td>{{ l.lead_email }}</td>
-                        <td>{{ l.lead_first_name }} {{ l.lead_last_name }}</td>
-                        <td>{{ l.lead_state ?: '—' }}</td>
-                        <td class="small">{{ l.sweepstake_name ?: '—' }}</td>
-                        <td class="small">{{ l.lead_subid ?: '(direct)' }}</td>
-                        <td class="small">{{ l.lead_device }}</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" href="/admin/leads/{{ l.lead_id }}">Fiche</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            {% include 'admin/_blank.html.twig' with {
+                'icon': 'people',
+                'title': 'Aucun participant ne correspond à ces filtres',
+                'text': "Ce n'est pas forcément une absence de trafic : le filtre par période porte sur la date d'inscription, et le filtre e-mail cherche une correspondance exacte du fragment saisi. Élargissez avant de conclure.",
+                'cta_url': '/admin/leads',
+                'cta_label': 'Retirer tous les filtres',
+                'cta_icon': 'x-lg'
+            } only %}
+        </div>
+    {% else %}
+        <div class="card card-table">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr><th class="num">#</th><th>Date</th><th>E-mail</th><th>Nom</th><th>État</th>
+                        <th>Concours</th><th>subid</th><th>Appareil</th><th class="num">Actions</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for l in leads %}
+                        {# Un participant anonymisé n'a plus de preuve de consentement :
+                           la ligne est atténuée pour qu'on ne la choisisse pas pour un dossier. #}
+                        <tr class="{{ l.lead_anonymized_at ? 'row-off' : '' }}">
+                            <td class="num cell-meta">{{ l.lead_id }}</td>
+                            <td class="text-nowrap cell-meta">{{ l.created_at }}</td>
+                            <td class="cell-key">
+                                <a href="/admin/leads/{{ l.lead_id }}">{{ l.lead_email }}</a>
+                                {% if l.lead_anonymized_at %}
+                                    <span class="badge text-bg-secondary" title="Les données personnelles ont été effacées ; les preuves de consentement sont parties avec.">anonymisé</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ l.lead_first_name }} {{ l.lead_last_name }}</td>
+                            <td>{{ l.lead_state ?: '—' }}</td>
+                            <td class="cell-meta">{{ l.sweepstake_name ?: '—' }}</td>
+                            <td>
+                                {% if l.lead_subid %}<code class="small">{{ l.lead_subid }}</code>
+                                {% else %}<span class="na">direct</span>{% endif %}
+                            </td>
+                            <td class="cell-meta">{{ l.lead_device }}</td>
+                            <td class="row-actions">
+                                <a class="btn btn-outline-secondary btn-xs" href="/admin/leads/{{ l.lead_id }}">
+                                    <i class="bi bi-file-earmark-text"></i> Fiche</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         {% if pages > 1 %}
-            <nav class="mt-3">
+            <nav class="mt-3" aria-label="Pagination des participants">
                 <ul class="pagination pagination-sm">
+                    {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="/admin/leads?{{ filters|merge({page: page - 1})|url_encode }}"
+                               aria-label="Page précédente">‹</a>
+                        </li>
+                    {% endif %}
                     {% for p in max(1, page - 3)..min(pages, page + 3) %}
                         <li class="page-item {{ p == page ? 'active' }}">
-                            <a class="page-link"
-                               href="/admin/leads?{{ filters|merge({page: p})|url_encode }}">{{ p }}</a>
+                            <a class="page-link" href="/admin/leads?{{ filters|merge({page: p})|url_encode }}">{{ p }}</a>
                         </li>
                     {% endfor %}
+                    {% if page < pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="/admin/leads?{{ filters|merge({page: page + 1})|url_encode }}"
+                               aria-label="Page suivante">›</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </nav>
         {% endif %}
+
+        <p class="screen-note mt-3">
+            Le compte en tête d'écran porte sur le <strong>jeu filtré</strong>, pas sur la page affichée ;
+            l'export CSV aussi. Ouvrir une fiche donne accès à la preuve de consentement — c'est le
+            document qu'on produirait en cas de contestation.
+        </p>
     {% endif %}
 {% endblock %}

@@ -56,7 +56,24 @@ Une offre sous le seuil d'impressions n'a pas d'eCPM fiable : elle passe par la 
 d'exploration d'`OfferSelector`, pas par le tri. Sans cela, une offre nouvelle ne serait jamais
 affichée et ne pourrait jamais accumuler d'historique.
 
+## Qualité des numéros
+
+Le téléphone est **obligatoire** sur les formulaires : c'est un arbitrage métier, il porte la
+rémunération. Son taux de collecte vaut donc toujours 100 % et n'apprend rien.
+
+Ce qui se mesure, c'est la **part de numéros démarchables** — ceux assortis d'un consentement
+`tcpa_phone` accordé. Un numéro sans ce consentement ne peut être ni appelé ni contacté par SMS ;
+il ne vaut que pour le dédoublonnage.
+
+L'indicateur est sur `/admin` (30 jours) et par source sur `/admin/stats/sources`. Il varie
+fortement d'une source à l'autre : c'est ce qui distingue une source qui livre ce pour quoi on la
+paie d'une source qui livre du volume.
+
 ## Sources de trafic
+
+L'écran `/admin/stats/sources` part des **participations**, pas des revenus. Une source qui
+apporte du volume sans rien rapporter doit apparaître : c'est précisément celle qui pose question.
+Partir de `t_offer_revenue_daily` la rendrait invisible.
 
 `subid` (affiliation), `utm_*` (emailing, SEO), `fbclid` / `gclid` / `ttclid` / `msclkid`
 (media buy) sont capturés à la première page et **conservés en session** pour toute la durée du

@@ -99,6 +99,8 @@ $app->get('/', SweepstakeController::class . ':home');
 $app->map(['GET', 'POST'], '/{slug}/entry', SweepstakeController::class . ':entry');
 $app->map(['GET', 'POST'], '/{slug}/details', SweepstakeController::class . ':details');
 $app->get('/{slug}/offers', SweepstakeController::class . ':offers');
+// Une offre par page. L'etape precede la route generique du parcours.
+$app->get('/{slug}/offers/{step:[0-9]+}', SweepstakeController::class . ':offerStep');
 $app->get('/{slug}/thank-you', SweepstakeController::class . ':thankYou');
 $app->get('/{slug}/rules', SweepstakeController::class . ':rules');
 $app->get('/{slug}', SweepstakeController::class . ':landing');

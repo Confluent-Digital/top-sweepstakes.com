@@ -26,9 +26,20 @@ tunnel. Elles doivent contenir, au minimum :
 - les **probabilités de gain** ;
 - le **mode de sélection**, de notification et de publication des gagnants.
 
-Un concours sans Official Rules complètes ne se publie pas. La liste des États exclus dans les
-règles et la colonne `sweepstake_excluded_states` doivent dire la même chose — c'est cette
-colonne qui refuse effectivement le participant.
+Un concours sans Official Rules complètes ne se publie pas — et **« non vide » ne suffit pas**
+comme critère. Des règles tronquées en plein mot ont été publiées sans que rien ne le signale.
+`SweepstakeAdminController::validateForPublication()` exige donc, pour passer en `published` :
+
+- des Official Rules d'au moins 1 500 caractères de texte, portant explicitement
+  *NO PURCHASE NECESSARY*, l'*alternate method of entry* et les *odds of winning* ;
+- un sponsor nommé **et son adresse postale** — elle sert deux fois : CAN-SPAM, et l'AMOE, qui
+  est l'adresse où l'on poste une participation par courrier ;
+- une date d'ouverture **et une date de clôture**. Sans dates, la période de participation ne se
+  délimite pas, donc l'éligibilité d'un tirage ne se justifie pas — et un concours sans date de
+  fin ne se ferme jamais : il continue de collecter.
+
+La liste des États exclus dans les règles et la colonne `sweepstake_excluded_states` doivent dire
+la même chose — c'est cette colonne qui refuse effectivement le participant.
 
 ⚠️ **Point business à remonter, pas à trancher dans le code** : New York et la Floride imposent
 enregistrement et cautionnement au-delà de 5 000 $ d'ARV.
@@ -78,6 +89,18 @@ dans la définition large de « share » : la page de partenaires doit refléter
 renvoie un **fragment HTML**, pas une page complète. `LegalController` le met en cache disque
 (`LEGALS_CACHE_TTL`) et **dégrade proprement** si le service ne répond pas : une page légale vide
 est une non-conformité, pas un incident d'affichage.
+
+⚠️ **Un code 200 ne prouve pas qu'on a reçu un texte légal.** Quand un fragment n'existe pas dans
+une langue donnée, le service répond **200 avec un avertissement PHP** et une trace Xdebug
+contenant le chemin absolu de son serveur. Sans contrôle, cette trace s'affichait à la place de la
+politique cookies et était mise en cache pour toute la durée du TTL — le repli ne se déclenchait
+jamais, puisque le contenu n'était pas considéré comme absent. Deux torts en un : page légale
+vide, et divulgation d'un chemin interne.
+
+`LegalContentService::looksLikeContent()` écarte donc les réponses trop courtes (< 200 caractères)
+et celles portant un marqueur d'erreur (`xdebug-error`, `Warning:`, `Fatal error`, `Call Stack`,
+`/var/www/`), journalise, et retombe sur le cache périmé. **Ne pas assouplir ce contrôle** : c'est
+la seule chose qui distingue un fragment d'une page d'erreur, le code HTTP étant identique.
 
 État de la couverture en anglais au démarrage du projet : `mentions-legales`,
 `conditions-generales`, `politique-vie-privee` et `partenaires` existent ;

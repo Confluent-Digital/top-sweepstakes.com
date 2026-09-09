@@ -69,7 +69,7 @@ final class LegalContentService
         }
 
         $fresh = $this->fetch(self::PAGES[$page]);
-        if ($fresh !== null && trim($fresh) !== '') {
+        if ($fresh !== null && $this->looksLikeContent($fresh, $page)) {
             $this->store($cacheFile, $fresh);
             return $fresh;
         }
@@ -85,6 +85,48 @@ final class LegalContentService
 
         $this->logger->error('Contenu legal indisponible et absent du cache', ['page' => $page]);
         return null;
+    }
+
+    /**
+     * Le corps recu ressemble-t-il a un texte legal ?
+     *
+     * Un code 200 ne suffit pas. Quand un fragment n'existe pas dans une langue
+     * donnee, le service de contenus repond 200 avec un avertissement PHP :
+     * `file_get_contents(...): Failed to open stream`, accompagne d'une trace
+     * Xdebug qui contient le chemin absolu de son serveur. Sans ce controle, on
+     * affichait cette trace a la place de la politique cookies, on la mettait
+     * en cache pour toute la duree du TTL, et le repli documente ne se
+     * declenchait jamais puisque le contenu n'etait pas considere comme absent.
+     *
+     * Deux torts en un : une page legale vide — ce que la regle interdit — et
+     * la divulgation d'un chemin interne.
+     */
+    private function looksLikeContent(string $body, string $page): bool
+    {
+        $trimmed = trim($body);
+
+        // Un fragment juridique fait quelques milliers de caracteres. Ce seuil
+        // ecarte les reponses vides et les messages d'erreur courts sans jamais
+        // atteindre un texte reel.
+        if (mb_strlen($trimmed) < 200) {
+            $this->logger->warning('Contenu legal trop court pour etre un fragment', [
+                'page' => $page,
+                'length' => mb_strlen($trimmed),
+            ]);
+            return false;
+        }
+
+        foreach (['xdebug-error', 'Fatal error', 'Warning:', 'Notice:', 'Call Stack', '/var/www/'] as $marker) {
+            if (stripos($trimmed, $marker) !== false) {
+                $this->logger->error('Contenu legal : reponse d\'erreur recue avec un code 200', [
+                    'page' => $page,
+                    'marker' => $marker,
+                ]);
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function fetch(string $remotePage): ?string

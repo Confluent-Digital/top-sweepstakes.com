@@ -15,7 +15,20 @@ final class DemoSweepstakeSeeder extends AbstractSeed
 {
     public function run(): void
     {
-        $this->execute('DELETE FROM t_sweepstake WHERE sweepstake_slug = "demo-amazon-750"');
+        // Le seed doit rester rejouable. On ne supprime pas le concours : des
+        // qu'un participant y est rattache, la cle etrangere RESTRICT s'y
+        // oppose — et c'est le bon comportement, on ne supprime pas un concours
+        // qui a collecte. On met donc a jour s'il existe deja.
+        $existingId = $this->scalar(
+            'SELECT sweepstake_id FROM t_sweepstake WHERE sweepstake_slug = :slug',
+            ['slug' => 'demo-amazon-750']
+        );
+
+        if ($existingId !== false && $existingId !== null) {
+            $this->refreshSweepstake((int) $existingId);
+            return;
+        }
+
         $this->execute('DELETE FROM t_offer WHERE offer_name LIKE "DEMO %"');
 
         $this->table('t_sweepstake')->insert([
@@ -165,6 +178,30 @@ final class DemoSweepstakeSeeder extends AbstractSeed
                 ])->saveData();
             }
         }
+    }
+
+    /**
+     * Remet le concours de demonstration dans son etat de reference, sans y
+     * toucher au-dela : ses participants, ses offres et ses statistiques
+     * restent en place.
+     */
+    private function refreshSweepstake(int $id): void
+    {
+        $statement = $this->getAdapter()->getConnection()->prepare(
+            'UPDATE t_sweepstake SET
+                sweepstake_official_rules_html = :rules,
+                sweepstake_date_start = :start,
+                sweepstake_date_end   = :end,
+                sweepstake_status     = :status
+              WHERE sweepstake_id = :id'
+        );
+        $statement->execute([
+            'rules' => $this->officialRules(),
+            'start' => date('Y-m-d', strtotime('-7 days')),
+            'end' => date('Y-m-d', strtotime('+90 days')),
+            'status' => 'published',
+            'id' => $id,
+        ]);
     }
 
     /**

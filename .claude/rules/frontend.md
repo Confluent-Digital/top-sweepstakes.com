@@ -39,6 +39,26 @@ chaque centaine de millisecondes se paie en taux de conversion.
 
 ## Back-office
 
+### ⚠️ Le piège des fiches d'édition
+
+Les fiches suivent toutes le même motif : `extract($input)` construit le tableau **complet** des
+colonnes, et `update()` les écrit toutes. **Un champ que le contrôleur sait lire mais que le
+gabarit n'expose pas est donc écrasé par sa valeur par défaut à chaque enregistrement** — sans
+erreur, sans message, sans trace.
+
+Ce n'est pas théorique : `theme_text`, `theme_surface` et `sweepstake_thankyou_html` étaient dans
+ce cas. Chaque sauvegarde de la fiche les vidait, et cela ne se découvre qu'en constatant qu'un
+texte a disparu, longtemps après.
+
+`tests/Unit/AdminFormCoverageTest.php` verrouille le motif : il compare ce que le contrôleur lit à
+ce que le gabarit envoie, et échoue en nommant les champs qui seraient effacés. Il couvre les noms
+littéraux et ceux construits par concaténation dans une boucle.
+
+Sa limite, assumée : quand les deux côtés bouclent sur une liste (`theme_{{ key }}`), il vérifie
+le préfixe et non que les deux listes soient identiques. **Ajouter une clé au thème demande donc
+de la déclarer des deux côtés**, et cela reste à la charge de la revue.
+
+
 Bootstrap 5 + DataTables + Chart.js. CSRF sur toute méthode mutative (`CsrfMiddleware`).
 
 - Une DataTable filtre côté serveur dès que la table dépasse quelques milliers de lignes.

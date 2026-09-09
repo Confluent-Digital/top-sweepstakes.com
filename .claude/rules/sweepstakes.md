@@ -36,15 +36,40 @@ Un seul jeu, dans `src/Views/front/` :
 
 ```
 layout.html.twig          en-tête, pied de page, liens légaux, variables CSS du thème
-landing.html.twig         dotation, promesse, CTA, badges, disclaimer de marque
+home.html.twig            liste des concours ouverts
+landing.html.twig         dotation, promesse, CTA, réassurance, disclaimer de marque
 form.html.twig            étape 1 et étape 2, rendues depuis t_sweepstake_field
-offers.html.twig          blocs d'offres display
+offer.html.twig           UNE offre, UNE page — voir offers-display.md
 thankyou.html.twig        confirmation
-partials/field_*.html.twig    un partial par type de champ
-partials/offer_*.html.twig    un partial par type d'offre (banner, coupon)
+rules.html.twig           Official Rules du concours
+legal.html.twig           fragment servi par legals.confluent-digital.com
+partials/field.html.twig  rendu d'un champ, tous types confondus
 ```
 
+Il n'y a **qu'un seul gabarit d'offre**, quel que soit son format (`banner` ou `coupon`) : il
+rend un unique élément cliquable. Deux gabarits par format ont existé et ont été supprimés — les
+garder, c'était risquer qu'on en réintroduise un à côté du lien de la carte, et deux éléments
+cliquables pour une même offre produisent deux clics pour une seule intention.
+
 Les visuels vivent dans `public/img/sweepstakes/<id>/`, uploadés depuis le back-office.
+
+## Longueur du tunnel : une ou deux étapes
+
+Le nombre d'étapes du formulaire **n'est pas une option** : il se déduit de `sweepstake_field_step`.
+
+- Des champs répartis sur les étapes 1 et 2 → tunnel en deux écrans.
+- Tous les champs à l'étape 1 → **tunnel en un seul écran**, et `/details` renvoie sur `/entry`.
+
+C'est volontairement une conséquence de la configuration et non une case à cocher : deux réglages
+qui pourraient se contredire finissent toujours par le faire. Auparavant, un concours dont tous
+les champs tenaient à l'étape 1 affichait quand même un second écran, vide, ne portant que les
+consentements — un abandon offert.
+
+**Les consentements se présentent toujours à la dernière étape peuplée**, quelle qu'elle soit :
+le participant doit savoir ce qu'il donne avant de consentir.
+
+Un tunnel court convertit mieux mais qualifie moins. L'arbitrage se mesure — taux de complétion
+par étape dans `t_lead` — il ne se devine pas.
 
 ## Variantes A/B
 

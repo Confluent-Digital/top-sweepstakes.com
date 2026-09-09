@@ -5,31 +5,65 @@
 
 {% block content %}
     <section class="hero">
+        <p class="hero-eyebrow">Free to enter · No purchase necessary</p>
+
         {% if sweepstake.sweepstake_prize_image %}
-            {# Dimensions declarees : le bouton ne doit pas se deplacer au
-               chargement de l'image, au moment ou le visiteur vise. #}
-            <img class="hero-prize"
-                 src="/img/sweepstakes/{{ sweepstake.sweepstake_id }}/{{ sweepstake.sweepstake_prize_image }}"
-                 alt="{{ sweepstake.sweepstake_prize_title }}"
-                 width="480" height="300" fetchpriority="high">
+            {#
+                Dimensions RÉELLES du fichier, relevées au téléversement : le
+                bouton ne doit pas se déplacer au chargement de l'image, au
+                moment précis où le visiteur vise.
+            #}
+            {% include 'front/partials/prize-image.html.twig' with {
+                'src': '/img/sweepstakes/' ~ sweepstake.sweepstake_id ~ '/' ~ sweepstake.sweepstake_prize_image,
+                'alt': sweepstake.sweepstake_prize_title ?: sweepstake.sweepstake_name,
+                'width': sweepstake.sweepstake_prize_image_width|default(0),
+                'height': sweepstake.sweepstake_prize_image_height|default(0),
+                'ratio_w': 440, 'ratio_h': 280,
+                'class': 'hero-prize',
+                'priority': true
+            } only %}
         {% endif %}
 
         <h1 class="hero-title">{{ sweepstake.sweepstake_prize_title ?: sweepstake.sweepstake_name }}</h1>
 
         {% if sweepstake.sweepstake_prize_value_usd > 0 %}
-            <p class="hero-value">Approximate retail value:
-                ${{ sweepstake.sweepstake_prize_value_usd|number_format(2) }}</p>
+            <p class="hero-value">
+                Approximate retail value
+                <strong>${{ sweepstake.sweepstake_prize_value_usd|number_format(0) }}</strong>
+            </p>
         {% endif %}
 
-        <a class="btn btn-primary btn-lg" href="/{{ sweepstake.sweepstake_slug }}/entry">
-            Enter for your chance to win
-        </a>
+        <div class="hero-cta">
+            <a class="btn btn-primary btn-lg btn-block" href="/{{ sweepstake.sweepstake_slug }}/entry">
+                Enter for your chance to win
+            </a>
+        </div>
 
-        <ul class="hero-reassurance">
-            <li>⏱ Takes less than 2 minutes</li>
-            <li>🔒 256-bit SSL encryption</li>
-            <li>🎁 No purchase necessary</li>
+        {# La note sous le bouton porte l'échéance, pas la durée : la durée est
+           déjà dite dans les réassurances, et un doublon coûte une ligne sans
+           rien ajouter. #}
+        {% if sweepstake.sweepstake_date_end %}
+            <p class="hero-note">Entries close {{ sweepstake.sweepstake_date_end|date('M j, Y') }}</p>
+        {% endif %}
+
+        <ul class="reassurance">
+            <li>{% include 'front/partials/icon.html.twig' with {'name': 'clock'} only %} <span>Under 2 minutes</span></li>
+            <li>{% include 'front/partials/icon.html.twig' with {'name': 'lock'} only %} <span>256-bit SSL encryption</span></li>
+            <li>{% include 'front/partials/icon.html.twig' with {'name': 'gift'} only %} <span>No purchase necessary</span></li>
         </ul>
+
+        {#
+            Rappel du bouton uniquement quand le visuel de dotation pousse le
+            premier hors de l'écran. Sans visuel, la page tient sur un écran et
+            un second bouton n'ajouterait que du bruit.
+        #}
+        {% if sweepstake.sweepstake_prize_image %}
+            <div class="hero-cta hero-cta--repeat">
+                <a class="btn btn-primary btn-lg btn-block" href="/{{ sweepstake.sweepstake_slug }}/entry">
+                    Enter for your chance to win
+                </a>
+            </div>
+        {% endif %}
     </section>
 
     {% if sweepstake.sweepstake_brand_disclaimer %}
@@ -40,12 +74,14 @@
         <p>
             Open to legal residents of the United States who are at least
             {{ sweepstake.sweepstake_min_age }} years old.
-            {% if sweepstake.sweepstake_excluded_states %}
-                Void in {{ sweepstake.sweepstake_excluded_states }}.
-            {% endif %}
-            {% if sweepstake.sweepstake_date_end %}
-                Ends {{ sweepstake.sweepstake_date_end|date('F j, Y') }}.
-            {% endif %}
+            {%- if sweepstake.sweepstake_excluded_states %}
+                {#
+                    Les États exclus sont stockés en codes séparés par des
+                    virgules. Rendus tels quels ils s'affichent « RI,PR », ce qui
+                    se lit comme un défaut d'affichage et décrédibilise la page.
+                #}
+                Void in {{ sweepstake.sweepstake_excluded_states|split(',')|map(s => s|trim)|join(', ') }}.
+            {%- endif %}
             See the <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a> for complete details.
         </p>
     </section>

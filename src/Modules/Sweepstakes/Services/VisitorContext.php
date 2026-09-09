@@ -31,6 +31,8 @@ final class VisitorContext
     private const KEY_DEVICE = 'device';
     private const KEY_VARIANT = 'variant';
     private const KEY_LEAD = 'lead';
+    private const KEY_OFFER_PATH = 'offer_path';
+    private const KEY_OFFER_SEEN = 'offer_seen';
 
     /** Parametres d'acquisition captures a l'entree. */
     private const ATTRIBUTION_PARAMS = [
@@ -193,6 +195,59 @@ final class VisitorContext
     public function forgetLead(int $sweepstakeId): void
     {
         $this->session->remove(self::KEY_LEAD . ':' . $sweepstakeId);
+    }
+
+    /**
+     * Sequence d'offres attribuee pour ce concours.
+     *
+     * Elle est figee au premier passage, pour la meme raison que la variante
+     * A/B : la retirer a chaque page ferait revoir la meme offre au visiteur et
+     * priverait l'ordre par eCPM de tout sens.
+     *
+     * @return list<int>
+     */
+    public function offerSequence(int $sweepstakeId): array
+    {
+        $stored = $this->session->get(self::KEY_OFFER_PATH . ':' . $sweepstakeId);
+        if (!is_array($stored)) {
+            return [];
+        }
+        return array_values(array_map('intval', $stored));
+    }
+
+    /** @param list<int> $offerIds */
+    public function setOfferSequence(int $sweepstakeId, array $offerIds): void
+    {
+        $this->session->set(self::KEY_OFFER_PATH . ':' . $sweepstakeId, array_values($offerIds));
+    }
+
+    /**
+     * Etapes du parcours deja comptees comme vues.
+     *
+     * Un rechargement de page ne doit pas produire une seconde impression : la
+     * regie ne paie qu'une exposition, notre compte doit dire pareil.
+     */
+    public function hasSeenOfferStep(int $sweepstakeId, int $step): bool
+    {
+        $seen = $this->session->get(self::KEY_OFFER_SEEN . ':' . $sweepstakeId, []);
+        return is_array($seen) && in_array($step, array_map('intval', $seen), true);
+    }
+
+    public function markOfferStepSeen(int $sweepstakeId, int $step): void
+    {
+        $key = self::KEY_OFFER_SEEN . ':' . $sweepstakeId;
+        $seen = $this->session->get($key, []);
+        $seen = is_array($seen) ? array_map('intval', $seen) : [];
+        if (!in_array($step, $seen, true)) {
+            $seen[] = $step;
+            $this->session->set($key, $seen);
+        }
+    }
+
+    public function forgetOfferPath(int $sweepstakeId): void
+    {
+        $this->session->remove(self::KEY_OFFER_PATH . ':' . $sweepstakeId);
+        $this->session->remove(self::KEY_OFFER_SEEN . ':' . $sweepstakeId);
     }
 
     /** Identifiant du participant enregistre, une fois le tunnel valide. */

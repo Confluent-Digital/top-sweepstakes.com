@@ -1,175 +1,557 @@
 /*
  * Tunnel public — feuille unique, pour tous les concours.
  *
- * Le theme (couleurs, police) arrive en variables CSS depuis la base : il n'y a
- * ni feuille ni classe par concours. Mobile d'abord : ce tunnel vit de trafic
- * paye, et chaque centaine de millisecondes se paie en taux de conversion.
+ * Le thème (couleurs, police) arrive en variables CSS depuis la base : il n'y
+ * a ni feuille ni classe par concours. Mobile d'abord — l'essentiel du trafic
+ * l'est, et il est acheté.
+ *
+ * Aucun CDN, aucune police distante : le rendu initial ne dépend d'aucun tiers.
  */
 
+/* ------------------------------------------------------------------ socle */
+
 *, *::before, *::after { box-sizing: border-box; }
+
+:root {
+    /* Neutres. Les couleurs de marque viennent du thème, injecté par le layout. */
+    --ink: #10131a;
+    --ink-soft: #545c6b;
+    --ink-faint: #8b93a3;
+    /* Les mentions obligatoires (Official Rules, éligibilité, disclaimer de
+       marque, adresse CAN-SPAM, liens CCPA) ne se grisent pas jusqu'à
+       l'illisibilité : elles doivent rester lues, pas seulement présentes.
+       6,4:1 sur le fond clair, contre 2,5:1 pour --ink-faint. */
+    --ink-legal: #4a5262;
+    --line: #e4e8f0;
+    --line-strong: #c6cedd;
+    --line-soft: #eef1f6;
+    --white: #fff;
+    --success: #12805c;
+    --danger: #c0392b;
+
+    /* Échelle d'espacement : multiples de 4, pour que tout s'aligne. */
+    --s1: .25rem; --s2: .5rem;  --s3: .75rem; --s4: 1rem;
+    --s5: 1.5rem; --s6: 2rem;   --s7: 3rem;
+
+    --radius: .875rem;
+    --radius-sm: .5rem;
+    --shadow: 0 1px 2px rgba(16, 19, 26, .04), 0 8px 24px rgba(16, 19, 26, .06);
+    --shadow-lift: 0 2px 4px rgba(16, 19, 26, .06), 0 16px 40px rgba(16, 19, 26, .1);
+}
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
     margin: 0;
     font-family: var(--font-family);
-    color: var(--color-text);
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--ink);
     background: var(--color-bg);
-    line-height: 1.5;
-    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
 }
 
-img { max-width: 100%; height: auto; }
-a { color: var(--color-primary); }
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--color-primary); text-underline-offset: .15em; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--s3); letter-spacing: -.015em; }
+p { margin: 0 0 var(--s4); }
 
 .sr-only {
-    position: absolute; width: 1px; height: 1px;
-    padding: 0; margin: -1px; overflow: hidden;
-    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
-/* Piege a robots : invisible pour l'humain, present pour le DOM. */
+/* Piège à robots : invisible pour l'humain, présent dans le DOM. */
 .hp { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; }
 
 /* ------------------------------------------------------------------ ossature */
 
 .site-header {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem; padding: .75rem 1rem;
+    gap: var(--s4); padding: var(--s3) var(--s4);
     background: var(--color-surface);
-    border-bottom: 1px solid rgba(0, 0, 0, .08);
+    border-bottom: 1px solid var(--line);
 }
-.site-logo { font-weight: 700; font-size: 1.05rem; text-decoration: none; color: var(--color-text); }
-.site-badge { font-size: .8rem; color: #2f7a4d; white-space: nowrap; }
+.site-logo {
+    font-weight: 800; font-size: 1.0625rem; letter-spacing: -.02em;
+    color: var(--ink); text-decoration: none;
+}
+.site-badge {
+    display: inline-flex; align-items: center; gap: var(--s1);
+    font-size: .75rem; font-weight: 600; color: var(--success); white-space: nowrap;
+}
+.site-badge .ico { stroke-width: 2.2; }
 
-.site-main { max-width: 46rem; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+.site-main { max-width: 34rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+/* Seule la liste d'accueil s'élargit : sur un écran de bureau, trois cartes
+   de front laissent voir trois dotations sans défiler, deux n'en laissent voir
+   que deux. Les écrans de tunnel, eux, restent étroits — une colonne de texte
+   large se lit mal et un formulaire large invite à survoler. */
+.site-main--wide { max-width: 68rem; }
 
+/* Le pied porte les mentions imposées : liens légaux, adresse postale
+   CAN-SPAM, disclaimer de marque. Elles restent visibles et lisibles — jamais
+   repliées derrière un accordéon ni grisées jusqu'à disparaître. */
 .site-footer {
-    max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 2.5rem;
-    font-size: .8rem; color: #5b6472; text-align: center;
+    max-width: 44rem; margin: 0 auto;
+    padding: var(--s5) var(--s4) var(--s6);
+    font-size: .75rem; color: var(--ink-legal); text-align: center;
+    line-height: 1.6;
+    border-top: 1px solid var(--line-soft);
 }
-.footer-links { display: flex; flex-wrap: wrap; gap: .5rem 1rem; justify-content: center; margin-bottom: .75rem; }
-.footer-links a { color: #5b6472; }
-.footer-address, .footer-disclaimer { margin: .5rem 0; }
+.footer-links {
+    display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4);
+    justify-content: center; margin-bottom: var(--s3);
+}
+.footer-links a { color: var(--ink-legal); text-decoration: underline; text-decoration-color: var(--line-strong); }
+.footer-links a:hover { text-decoration: underline; }
+.footer-address, .footer-disclaimer { margin: var(--s2) 0; }
 .footer-disclaimer { font-style: italic; }
-
-/* ------------------------------------------------------------------ landing */
-
-.hero { text-align: center; padding: 1rem 0 1.5rem; }
-.hero-prize { border-radius: .75rem; }
-.hero-title { font-size: 1.75rem; line-height: 1.2; margin: 1rem 0 .5rem; }
-.hero-value { color: #5b6472; margin: 0 0 1.25rem; }
-.hero-sub { color: #5b6472; }
-
-.hero-reassurance {
-    list-style: none; padding: 0; margin: 1.25rem 0 0;
-    display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; justify-content: center;
-    font-size: .85rem; color: #5b6472;
-}
-
-.disclaimer, .legal-summary { font-size: .8rem; color: #5b6472; text-align: center; }
 
 /* ------------------------------------------------------------------ boutons */
 
 .btn {
-    display: inline-block; padding: .75rem 1.25rem;
-    border: 0; border-radius: .5rem;
-    font: inherit; font-weight: 600; text-align: center; text-decoration: none;
-    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+    /* 48 px de haut : atteignable au pouce sans viser. */
+    min-height: 3rem; padding: var(--s3) var(--s5);
+    border: 0; border-radius: var(--radius-sm);
+    font: inherit; font-weight: 700; line-height: 1.2;
+    text-align: center; text-decoration: none; cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
 }
-.btn-primary { background: var(--color-primary); color: #fff; }
-.btn-accent { background: var(--color-accent); color: #161a22; }
-.btn-secondary { background: transparent; color: var(--color-primary); border: 1px solid currentColor; }
-.btn-lg { padding: .95rem 1.75rem; font-size: 1.05rem; }
-.btn-block { display: block; width: 100%; }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    outline-offset: 2px;
+}
+
+.btn-primary { background: var(--color-primary); color: var(--white); box-shadow: var(--shadow); }
+.btn-primary:hover { box-shadow: var(--shadow-lift); }
+
+.btn-accent { background: var(--color-accent); color: var(--ink); box-shadow: var(--shadow); }
+.btn-accent:hover { box-shadow: var(--shadow-lift); }
+
+.btn-ghost { background: transparent; color: var(--ink-soft); font-weight: 600; }
+.btn-ghost:hover { color: var(--ink); }
+
+.btn-outline { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+
+/* Refus d'une offre : meme taille et meme largeur que l'acceptation, avec un
+   contour franc. Un lien gris sans bordure se lit comme une legende, pas comme
+   une sortie — et un participant qui ne voit pas la sortie clique l'offre par
+   contrainte. Voir .claude/rules/offers-display.md, regle 6. */
+.btn-decline {
+    background: var(--white); color: var(--ink);
+    border: 1px solid var(--line-strong);
+}
+.btn-decline:hover { border-color: var(--ink-faint); }
+
+.btn-lg { min-height: 3.5rem; font-size: 1.0625rem; padding: var(--s4) var(--s6); }
+.btn-block { display: flex; width: 100%; }
+
+/* ------------------------------------------------------------------ landing */
+
+.hero { text-align: center; }
+
+.hero-eyebrow {
+    display: inline-block; margin-bottom: var(--s3);
+    padding: var(--s1) var(--s3); border-radius: 999px;
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+}
+
+/* Le gabarit déclare `width="440" height="280"` en dur, quelle que soit l'image
+   téléversée : un visuel portrait est rendu plus haut que la place réservée, et
+   le bouton descend APRÈS le chargement, au moment où le visiteur vise. Le
+   plafond borne ce déplacement tant que l'upload n'enregistre pas les
+   dimensions réelles. */
+.hero-prize {
+    margin: 0 auto var(--s4); border-radius: var(--radius);
+    box-shadow: var(--shadow-lift);
+    max-height: 15rem; width: auto; object-fit: contain;
+}
+
+.hero-title { font-size: clamp(1.75rem, 7vw, 2.5rem); font-weight: 800; margin-bottom: var(--s2); }
+
+.hero-value {
+    display: inline-block; margin-bottom: var(--s5);
+    font-size: .9375rem; font-weight: 600; color: var(--ink-soft);
+}
+.hero-value strong { color: var(--color-primary); font-size: 1.125rem; }
+
+.hero-sub { color: var(--ink-soft); margin-bottom: var(--s5); }
+
+.hero-cta { margin-bottom: var(--s3); }
+
+.hero-note { font-size: .8125rem; color: var(--ink-soft); }
+
+.hero-cta--repeat { margin: var(--s5) 0 0; }
+
+/* Un seul bloc à filets fins plutôt que trois cartes : les réassurances se
+   lisent d'un bloc, et les 3 cm gagnés en hauteur remontent la mention
+   d'éligibilité et le rappel du bouton dans l'écran. */
+.reassurance {
+    list-style: none; margin: var(--s5) 0 0; padding: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.reassurance li {
+    display: flex; align-items: center; gap: var(--s3);
+    padding: var(--s3) var(--s4);
+    border-bottom: 1px solid var(--line-soft);
+    font-size: .875rem; text-align: left;
+}
+.reassurance li:last-child { border-bottom: 0; }
+/* Icônes : SVG en ligne, monochromes, à la couleur du texte. Les emoji
+   rendaient une couleur et un dessin différents sur chaque plateforme — trois
+   pictogrammes bariolés au milieu d'une page sobre se lisent comme une
+   décoration, pas comme une garantie. Aucune requête supplémentaire. */
+.ico { flex: 0 0 auto; display: block; }
+.reassurance .ico { color: var(--color-primary); }
+
+/* Éligibilité, États exclus, renvoi aux Official Rules : mention obligatoire,
+   donc lisible. */
+.legal-summary {
+    margin-top: var(--s5); padding-top: var(--s4);
+    border-top: 1px solid var(--line-soft);
+    font-size: .8125rem; color: var(--ink-legal); text-align: center;
+    line-height: 1.6;
+}
+.legal-summary a { font-weight: 600; }
+/* Disclaimer de marque : obligatoire dès que la dotation porte une marque
+   tierce — il ne se noie pas dans le fond. */
+.disclaimer {
+    margin-top: var(--s5);
+    font-size: .8125rem; color: var(--ink-legal); text-align: center;
+    line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ carte */
+
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: var(--s5) var(--s4);
+}
+
+/* ------------------------------------------------------------------ progression */
+
+.progress-head { margin-bottom: var(--s4); }
+
+.progress-track {
+    height: .375rem; border-radius: 999px;
+    background: var(--line); overflow: hidden;
+}
+.progress-fill {
+    height: 100%; border-radius: 999px;
+    background: var(--color-primary);
+    transition: width .3s ease;
+}
+.progress-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: var(--s2);
+    font-size: .8125rem; font-weight: 600; color: var(--ink-soft);
+}
+/* Sur le parcours d'offres, la seconde mention rappelle que la barre ne
+   commande rien : elle situe, elle n'oblige pas. */
+.progress-optional {
+    color: var(--ink-faint); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em; font-size: .6875rem;
+}
 
 /* ------------------------------------------------------------------ formulaire */
 
-.form-section { background: var(--color-surface); border-radius: .75rem; padding: 1.25rem; }
+.form-title { font-size: 1.375rem; font-weight: 800; margin-bottom: var(--s2); }
+.form-lead { color: var(--ink-soft); font-size: .9375rem; margin-bottom: var(--s5); }
 
-.progress { height: .4rem; background: rgba(0, 0, 0, .08); border-radius: .2rem; overflow: hidden; }
-.progress-bar { height: 100%; background: var(--color-primary); transition: width .2s ease; }
-.progress-label { font-size: .8rem; color: #5b6472; margin: .4rem 0 0; }
-
-.form-title { font-size: 1.35rem; margin: 1rem 0 1.25rem; }
-.form-note { font-size: .8rem; color: #5b6472; text-align: center; margin-top: 1rem; }
-
-.field { margin-bottom: 1rem; }
-.field label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: .3rem; }
-.field .optional { font-weight: 400; color: #8a929e; }
+.field { margin-bottom: var(--s4); }
+.field label { display: block; font-size: .875rem; font-weight: 600; margin-bottom: var(--s2); }
+.field .optional { font-weight: 400; color: var(--ink-faint); }
 
 .field input, .field select {
-    width: 100%; padding: .7rem .75rem;
-    font: inherit; color: inherit;
-    background: #fff; border: 1px solid #c9d0da; border-radius: .5rem;
+    width: 100%; min-height: 3rem; padding: var(--s3);
+    font: inherit; color: var(--ink);
+    background: var(--white);
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    transition: border-color .12s ease, box-shadow .12s ease;
 }
 .field input:focus, .field select:focus {
-    outline: 2px solid var(--color-primary); outline-offset: 1px; border-color: var(--color-primary);
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
-.field--error input, .field--error select { border-color: #c0392b; }
+.field--error input, .field--error select { border-color: var(--danger); }
 
-/* L'erreur s'affiche au champ concerne, et la saisie n'est jamais perdue. */
-.field-error { color: #c0392b; font-size: .82rem; margin: .3rem 0 0; }
+.field-hint { color: var(--ink-faint); font-size: .75rem; margin: var(--s2) 0 0; }
+.field-error { color: var(--danger); font-size: .8125rem; font-weight: 600; margin: var(--s2) 0 0; }
 
-.alert { padding: .75rem 1rem; border-radius: .5rem; margin-bottom: 1rem; }
-.alert-error { background: #fdecea; color: #a4271b; }
+.alert { padding: var(--s3) var(--s4); border-radius: var(--radius-sm); margin-bottom: var(--s4); font-size: .875rem; }
+.alert-error { background: #fdecea; color: #8c1f14; }
+.alert-success { background: #e7f6f0; color: var(--success); }
 
-.consents { border: 0; padding: 0; margin: 1.25rem 0; }
-.consent { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .9rem; font-size: .82rem; color: #47505f; }
-.consent input { margin-top: .2rem; flex: 0 0 auto; width: 1.05rem; height: 1.05rem; }
-.consent--error span { color: #a4271b; }
+/* Chaque message renvoie a son champ : apres un aller-retour serveur, le
+   navigateur revient en haut de page et le champ fautif peut etre hors ecran. */
+.alert-title { font-weight: 700; margin: 0; }
+.alert-list { margin: var(--s2) 0 0; padding-left: var(--s4); }
+.alert-list li { margin-top: var(--s1); }
+.alert-list a { color: inherit; }
 
-/* ------------------------------------------------------------------ offres */
-
-.entry-confirmed { text-align: center; margin-bottom: 1.5rem; }
-.entry-confirmed h1 { font-size: 1.5rem; }
-.lead { color: #47505f; }
-
-.offers-intro { font-size: .9rem; color: #5b6472; text-align: center; margin-bottom: 1.25rem; }
-.offer-block-title { font-size: 1.05rem; margin: 0 0 .75rem; }
-
-.offer-list { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; gap: .85rem; }
-.offer-block--grid .offer-list { grid-template-columns: 1fr; }
-
-.offer-link {
-    display: block; padding: 1rem; text-decoration: none; color: inherit;
-    background: var(--color-surface); border: 1px solid rgba(0, 0, 0, .08);
-    border-radius: .75rem;
+.consents { border: 0; padding: var(--s4) 0 0; margin: var(--s5) 0 0; border-top: 1px solid var(--line-soft); }
+/* `float` sort la légende du flux du `fieldset` : sans lui elle se pose SUR le
+   filet de séparation et le coupe en deux, juste avant les cases à cocher. */
+.consents-legend {
+    float: left; width: 100%; padding: 0; margin-bottom: var(--s3);
+    font-size: .875rem; font-weight: 700; color: var(--ink);
 }
-.offer-link:hover { border-color: var(--color-primary); }
-.offer-headline { display: block; font-weight: 600; margin-bottom: .5rem; }
-.offer-cta { margin-top: .75rem; }
+.consent {
+    display: flex; gap: var(--s3); align-items: flex-start;
+    padding: var(--s3); margin-bottom: var(--s3);
+    border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+    font-size: .875rem; line-height: 1.5; color: var(--ink-soft);
+    cursor: pointer;
+}
+/* La case obligatoire ne doit pas se confondre avec les deux facultatives.
+   Trois blocs identiques poussent a tout cocher « au cas ou » : un opt-in TCPA
+   obtenu par confusion ne vaut rien, et se retourne contre nous. */
+.consent--required { border-color: var(--line); background: #fbfcfe; }
+.consent:focus-within { border-color: var(--color-primary); }
 
-.offer-link--coupon { display: flex; gap: 1rem; align-items: center; }
-.offer-coupon-text { flex: 1 1 auto; }
-.offer-coupon-image { flex: 0 0 6.5rem; }
+.consent-body { display: block; }
+.consent-flag {
+    display: inline-block; margin-bottom: var(--s1);
+    padding: 0 var(--s2); border-radius: 999px;
+    background: var(--line-soft); color: var(--ink-faint);
+    font-size: .625rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.consent-flag--required {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+}
+.consent-text { display: block; }
 
-/* Le chemin de sortie reste visible : personne ne doit croire qu'un clic sur
-   une offre est necessaire pour valider sa participation. */
-.offers-skip { text-align: center; margin-top: 1rem; }
+/* Cible tactile confortable : une case de consentement ratée fait un abandon. */
+.consent input { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; margin-top: .2rem; accent-color: var(--color-primary); }
+.consent--error { border-color: var(--danger); }
+.consent--error .consent-text { color: #8c1f14; }
+
+/* « No purchase necessary » + renvoi aux règles : mention obligatoire sous le
+   bouton, elle se lit. */
+.form-note { font-size: .75rem; color: var(--ink-legal); text-align: center; margin-top: var(--s4); }
+
+/* ------------------------------------------------------------------ parcours d'offres */
+
+.entry-confirmed {
+    display: flex; align-items: flex-start; gap: var(--s2);
+    padding: var(--s3); margin: 0 0 var(--s4);
+    background: #e7f6f0; border-radius: var(--radius-sm);
+    font-size: .875rem; line-height: 1.45; color: #1f6b52;
+}
+/* `strong` reste en ligne : passe en bloc, il coutait une troisieme ligne, et
+   chaque ligne ici repousse le bouton « No thanks » sous la ligne de flottaison. */
+.entry-confirmed strong { color: var(--success); }
+.entry-confirmed .ico { margin-top: .1em; }
+
+.offer-card { padding: 0; overflow: hidden; }
+/* « Sponsored » est une mention imposée par la FTC : elle est en tête de carte
+   et lisible, pas en gris clair au ras du fond. */
+.offer-sponsored {
+    padding: var(--s2) var(--s4);
+    background: var(--line-soft);
+    font-size: .6875rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-legal);
+}
+.offer-body { padding: var(--s3) var(--s4) var(--s4); text-align: center; }
+/* Le visuel est plafonne : les deux boutons — accepter ET refuser — doivent
+   rester visibles sans defiler sur un mobile ordinaire, quelle que soit la
+   creation fournie par l'annonceur. */
+.offer-image {
+    margin: 0 auto var(--s3); border-radius: var(--radius-sm);
+    max-height: 7rem; width: auto; object-fit: contain;
+}
+.offer-headline { font-size: 1.1875rem; font-weight: 800; margin-bottom: var(--s2); }
+.offer-text { color: var(--ink-soft); font-size: .9375rem; }
+.offer-text p:last-child { margin-bottom: 0; }
+
+/* Accepter et refuser sur UNE rangée, à parts égales. Empilés, le refus passait
+   sous la ligne de flottaison dès qu'une offre portait un visuel et quelques
+   lignes de texte (vérifié au rendu, 390x664). Sur une rangée, la co-visibilité
+   ne dépend plus de la longueur de la création. Règle 6 d'offers-display.md. */
+.offer-actions {
+    padding: 0 var(--s4) var(--s4);
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3);
+    align-items: stretch;
+}
+.offer-actions .btn {
+    /* Les libellés de régie sont longs : on laisse le texte passer à la ligne
+       plutôt que déborder, et les deux boutons grandissent ensemble. */
+    padding: var(--s3) var(--s2); font-size: .9375rem;
+    text-wrap: balance;
+}
+.offer-accept, .offer-decline { width: 100%; }
+
+.offer-progress-note { text-align: center; font-size: .75rem; color: var(--ink-soft); margin-top: var(--s3); }
 
 /* ------------------------------------------------------------------ divers */
 
-.sweepstake-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
-.sweepstake-card { background: var(--color-surface); border-radius: .75rem; overflow: hidden; }
-.sweepstake-card a { display: block; padding: 1rem; text-decoration: none; color: inherit; text-align: center; }
-.sweepstake-card h2 { font-size: 1.1rem; margin: .75rem 0 .25rem; }
-.prize-value { color: #5b6472; margin: 0 0 .75rem; }
+/* ------------------------------------------------------------------ accueil */
 
-.empty-state { text-align: center; color: #5b6472; padding: 2rem 0; }
+/* La seule page indexée du site. La dotation y est le sujet : le chiffre passe
+   avant l'intitulé, parce qu'il se comprend sans être lu. Toutes les cartes
+   sont au même rang — la liste est déjà triée par valeur, et la dotation la
+   plus chère n'est pas forcément celle qui convertit le mieux. */
+.home-head { text-align: center; margin-bottom: var(--s6); }
+.home-title { font-size: clamp(1.625rem, 6vw, 2.25rem); font-weight: 800; margin-bottom: var(--s2); }
+.home-sub { color: var(--ink-soft); margin: 0; font-size: .9375rem; }
 
-.legal-page { background: var(--color-surface); border-radius: .75rem; padding: 1.5rem; }
-.legal-page h1 { font-size: 1.4rem; margin-top: 0; }
-.legal-page h2, .legal-page h3 { font-size: 1.05rem; margin-top: 1.5rem; }
-.legal-subtitle { color: #5b6472; margin-top: -.5rem; }
+/* auto-fit + largeur bornée + centrage : avec deux concours ouverts, des
+   cartes étirées sur toute la largeur ou collées à gauche donnent l'impression
+   d'une page à moitié chargée. Bornée à 22rem, la carte garde la même allure
+   qu'il y en ait une ou douze. */
+.prize-grid {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; gap: var(--s4);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 19rem));
+    justify-content: center;
+}
+
+.prize-card {
+    background: var(--color-surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.prize-card:hover, .prize-card:focus-within {
+    box-shadow: var(--shadow-lift);
+    transform: translateY(-2px);
+}
+
+/* Un seul lien par carte, mais il couvre toute la carte : sur mobile, la cible
+   au pouce est la vignette entière, pas le seul bouton. */
+.prize-link {
+    display: flex; flex-direction: column; height: 100%;
+    color: inherit; text-decoration: none;
+}
+.prize-link:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    outline-offset: -3px;
+}
+
+.prize-media { position: relative; display: block; background: var(--line-soft); }
+.prize-photo { width: 100%; height: 11rem; object-fit: cover; }
+/* Sans visuel, un aplat au ton du concours et un pictogramme : répéter le
+   montant ici l'afficherait deux fois à trois centimètres d'intervalle, ce qui
+   se lit comme une erreur d'affichage plutôt que comme une insistance. */
+.prize-media--none {
+    display: flex; align-items: center; justify-content: center;
+    height: 9rem;
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+}
+.prize-media--none .ico { width: 2.75rem; height: 2.75rem; opacity: .75; }
+/* L'échéance n'apparaît que quand elle est proche : « 87 jours restants »
+   invite à revenir plus tard, c'est-à-dire à ne pas participer. */
+.prize-deadline {
+    position: absolute; top: var(--s2); left: var(--s2);
+    padding: var(--s1) var(--s2);
+    border-radius: 999px;
+    background: rgba(16, 19, 26, .82);
+    color: #fff;
+    font-size: .6875rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em;
+}
+
+.prize-body {
+    display: flex; flex-direction: column; flex: 1 1 auto;
+    padding: var(--s4); text-align: center;
+}
+/* Le chiffre est le sujet de la page. */
+.prize-amount {
+    display: block;
+    font-size: 2rem; font-weight: 800; line-height: 1.05;
+    letter-spacing: -.03em;
+    color: var(--color-primary);
+}
+.prize-amount-note {
+    display: block; margin-bottom: var(--s3);
+    font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--ink-faint);
+}
+.prize-name {
+    display: block; margin-bottom: var(--s4);
+    font-size: 1rem; font-weight: 700; line-height: 1.35;
+    text-wrap: balance;
+}
+/* Le bouton reste aligné d'une carte à l'autre, quelle que soit la longueur de
+   l'intitulé : une rangée de boutons en dents de scie se scanne mal. */
+.prize-cta { margin-top: auto; }
+.prize-terms {
+    display: block; margin-top: var(--s2);
+    font-size: .6875rem; color: var(--ink-legal);
+}
+
+.home-foot {
+    margin: var(--s6) auto 0; max-width: 46rem;
+    text-align: center; font-size: .8125rem; color: var(--ink-legal);
+    line-height: 1.6;
+}
+
+.sweepstake-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s4); }
+.sweepstake-card {
+    background: var(--color-surface); border: 1px solid var(--line-soft);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    transition: box-shadow .12s ease, transform .12s ease;
+}
+.sweepstake-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
+.sweepstake-card a { display: block; text-decoration: none; color: inherit; }
+.sweepstake-card .body { padding: var(--s4); text-align: center; }
+.sweepstake-card h2 { font-size: 1.0625rem; font-weight: 700; margin-bottom: var(--s1); }
+.prize-value { color: var(--ink-soft); font-size: .875rem; margin-bottom: var(--s4); display: block; }
+
+.empty-state { text-align: center; color: var(--ink-faint); padding: var(--s7) 0; }
 
 .thankyou { text-align: center; }
-.thankyou h1 { font-size: 1.5rem; }
+/* La marque de fin est un pictogramme monochrome à la couleur du concours :
+   le thème vient de la base, la page de remerciement le porte comme les
+   autres. */
+.thankyou-mark {
+    display: flex; justify-content: center;
+    color: var(--color-primary);
+    line-height: 1; margin: 0 0 var(--s3);
+}
+.thankyou h1 { font-size: 1.5rem; font-weight: 800; }
+.thankyou .lead { color: var(--ink-soft); }
 
-/* ------------------------------------------------------------------ >= 40rem */
+.legal-page {
+    background: var(--color-surface); border: 1px solid var(--line-soft);
+    border-radius: var(--radius); padding: var(--s5) var(--s4);
+    font-size: .9375rem;
+}
+.legal-page h1 { font-size: 1.375rem; font-weight: 800; }
+.legal-page h2, .legal-page h3 { font-size: 1rem; margin-top: var(--s5); }
+.legal-subtitle { color: var(--ink-faint); margin-top: calc(var(--s3) * -1); }
 
-@media (min-width: 40rem) {
-    .hero-title { font-size: 2.25rem; }
-    .site-main { padding-top: 2rem; }
-    .form-section { padding: 2rem; }
-    .offer-block--grid .offer-list { grid-template-columns: repeat(2, 1fr); }
+/* ------------------------------------------------------------------ ≥ 36rem */
+
+@media (min-width: 36rem) {
+    .site-main { padding-top: var(--s6); }
+    .card { padding: var(--s6); }
+    .offer-body, .offer-actions { padding-left: var(--s6); padding-right: var(--s6); }
+    .reassurance { grid-template-columns: repeat(3, 1fr); }
+    .reassurance li { flex-direction: column; text-align: center; gap: var(--s2); }
     .sweepstake-grid { grid-template-columns: repeat(2, 1fr); }
+    .offer-actions { max-width: 26rem; margin: 0 auto; }
+    .offer-actions .btn { font-size: 1rem; padding: var(--s3) var(--s4); }
+    .offer-image { max-height: 12rem; }
+}
+
+/* Respecte le réglage système : une animation peut gêner, jamais aider. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
 }

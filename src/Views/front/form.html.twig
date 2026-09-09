@@ -3,49 +3,118 @@
 {% block title %}Step {{ step }} of {{ total_steps }} — {{ sweepstake.sweepstake_name }}{% endblock %}
 
 {% block content %}
-    <section class="form-section">
-        {# Progression honnete : le pourcentage correspond aux etapes reellement
-           franchies. Une barre a 90 % des la premiere etape se paie en abandons. #}
-        <div class="progress" role="progressbar"
-             aria-valuenow="{{ (step - 1) * 100 // total_steps }}" aria-valuemin="0" aria-valuemax="100">
-            <div class="progress-bar" style="width: {{ (step - 1) * 100 // total_steps }}%"></div>
+    <div class="progress-head">
+        {#
+            Progression honnête ET lisible.
+
+            Le remplissage se place AU MILIEU de l'étape en cours : l'étape
+            commencée compte pour la moitié d'elle-même. Un remplissage calculé
+            sur les seules étapes terminées afficherait une barre vide à
+            l'ouverture — « rien de fait, tout à faire » — et une barre à moitié
+            vide sur l'écran intitulé « Almost done », ce qui se lit comme une
+            contradiction et se paie en abandons.
+
+            Le pourcentage chiffré est volontairement absent : « Step 2 of 2 »
+            dit déjà où l'on en est, sans laisser croire qu'il reste la moitié
+            du parcours.
+        #}
+        {% set percent = ((step * 2 - 1) * 100) // (total_steps * 2) %}
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {{ percent }}%"
+                 role="progressbar" aria-valuenow="{{ step }}" aria-valuemin="0" aria-valuemax="{{ total_steps }}"
+                 aria-valuetext="Step {{ step }} of {{ total_steps }}"
+                 aria-label="Entry form progress"></div>
         </div>
-        <p class="progress-label">Step {{ step }} of {{ total_steps }}</p>
+        <p class="progress-label">
+            <span>Step {{ step }} of {{ total_steps }}</span>
+            <span>{% if step < total_steps %}One more step{% else %}Last step{% endif %}</span>
+        </p>
+    </div>
 
+    <section class="card">
         <h1 class="form-title">
-            {% if step == 1 %}Tell us who you are{% else %}Almost done — where can we reach you?{% endif %}
+            {% if step == 1 %}Let&rsquo;s get you entered{% else %}Almost done{% endif %}
         </h1>
+        <p class="form-lead">
+            {% if step == 1 %}
+                Tell us who you are — it takes about a minute.
+            {% else %}
+                Where should we reach you if you win?
+            {% endif %}
+        </p>
 
+        {#
+            Le récapitulatif d'erreurs pointe chaque message vers son champ.
+            Après un aller-retour serveur, le navigateur revient en haut de page :
+            sans ancre, un participant dont l'erreur porte sur le dernier champ
+            doit chercher lui-même ce qui ne va pas.
+        #}
         {% if errors is not empty %}
-            <p class="alert alert-error" role="alert">Please correct the highlighted fields below.</p>
+            <div class="alert alert-error" role="alert">
+                <p class="alert-title">
+                    Please fix {{ errors|length }} thing{{ errors|length > 1 ? 's' : '' }} below.
+                </p>
+                <ul class="alert-list">
+                    {% for key, message in errors %}
+                        {% set anchor = key starts with 'consent_'
+                            ? '#consent-' ~ key|slice(8)
+                            : '#field-' ~ key %}
+                        <li><a href="{{ anchor }}">{{ message }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
         {% endif %}
 
-        <form method="post" action="{{ action }}" novalidate class="entry-form">
+        {#
+            Pas de `novalidate` : la validation native du navigateur ne coûte
+            aucun octet de JavaScript et évite l'aller-retour serveur sur les
+            fautes de frappe les plus courantes (e-mail sans arobase, code
+            postal à quatre chiffres, champ vide). La validation serveur reste
+            seule à faire autorité — elle ne dépend d'aucun réglage du client.
+        #}
+        <form method="post" action="{{ action }}">
             {% for field in fields %}
                 {% include 'front/partials/field.html.twig' with {
                     field: field,
                     value: values[field.sweepstake_field_key]|default(''),
                     error: errors[field.sweepstake_field_key]|default(null),
-                    states: states
+                    states: states,
+                    min_age: sweepstake.sweepstake_min_age
                 } only %}
             {% endfor %}
 
             {% if consents is not empty %}
                 <fieldset class="consents">
-                    <legend class="sr-only">Your consent</legend>
+                    <legend class="consents-legend">Your consent</legend>
                     {% for consent in consents %}
                         {#
-                            Le texte affiche ici est EXACTEMENT celui archive dans
-                            t_lead_consent : meme chaine, meme source. Voir
-                            .claude/rules/legal-us.md.
-                            Aucune case n'est pre-cochee.
+                            Le texte affiché ici est EXACTEMENT celui archivé dans
+                            t_lead_consent : même chaîne, même source. Aucune case
+                            n'est pré-cochée. Voir .claude/rules/legal-us.md.
+
+                            La mention « Required » / « Optional » est un repère
+                            de mise en page ajouté À CÔTÉ du texte, jamais dedans :
+                            elle ne change pas la chaîne archivée. Sans elle, les
+                            trois cases se ressemblent, et le participant coche
+                            tout par précaution — un consentement TCPA obtenu par
+                            confusion ne vaut rien et se retourne contre nous.
+
+                            `checked_consents` restitue ce que le participant
+                            avait coché quand un autre champ le renvoie ici. Ce
+                            n'est pas une case pré-cochée : la liste est vide au
+                            premier affichage, et une case ne revient cochée que
+                            parce que LUI l'a cochée.
                         #}
-                        <label class="consent{% if errors['consent_' ~ consent.type] is defined %} consent--error{% endif %}">
-                            <input type="checkbox"
-                                   name="consent_{{ consent.type }}"
-                                   value="1"
-                                   {% if consent.required %}data-required="1"{% endif %}>
-                            <span>{{ consent.text }}</span>
+                        <label class="consent{{ consent.required ? ' consent--required' : '' }}{% if errors['consent_' ~ consent.type] is defined %} consent--error{% endif %}">
+                            <input type="checkbox" id="consent-{{ consent.type }}"
+                                   name="consent_{{ consent.type }}" value="1"
+                                   {% if consent.type in checked_consents|default([]) %}checked{% endif %}>
+                            <span class="consent-body">
+                                <span class="consent-flag{{ consent.required ? ' consent-flag--required' : '' }}">
+                                    {{- consent.required ? 'Required' : 'Optional' -}}
+                                </span>
+                                <span class="consent-text">{{ consent.text }}</span>
+                            </span>
                         </label>
                         {% if errors['consent_' ~ consent.type] is defined %}
                             <p class="field-error">{{ errors['consent_' ~ consent.type] }}</p>
@@ -54,9 +123,8 @@
                 </fieldset>
             {% endif %}
 
-            {# Piege a robots : un champ invisible qu'un humain ne remplit jamais,
-               et l'heure d'ouverture du formulaire. Les deux sont verifies cote
-               serveur par SpamGuard — un piege qu'on ne relit pas ne sert a rien. #}
+            {# Piège à robots et heure d'ouverture, tous deux relus côté serveur
+               par SpamGuard — un piège qu'on ne relit pas ne sert à rien. #}
             <div class="hp" aria-hidden="true">
                 <label for="{{ honeypot_field }}">Leave this field empty</label>
                 <input type="text" id="{{ honeypot_field }}" name="{{ honeypot_field }}"
@@ -70,9 +138,8 @@
         </form>
 
         <p class="form-note">
-            By continuing you agree to our
+            No purchase necessary. See the
             <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a>.
-            No purchase necessary.
         </p>
     </section>
 {% endblock %}

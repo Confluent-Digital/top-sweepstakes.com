@@ -1,0 +1,1190 @@
+/* ============================================================================
+   Back-office top-sweepstakes — surcouche Bootstrap 5.3.
+
+   Doctrine, empruntee a Vigil et adaptee a notre metier : c'est un outil de
+   travail interne. La densite est une qualite, le chiffre est le sujet,
+   l'ecran se scanne. La couleur est reservee au statut et a l'action ; la
+   hierarchie se fait au poids et a l'espacement.
+
+   Notre metier ajoute trois exigences que le systeme doit porter lui-meme,
+   parce qu'une erreur y coute de l'argent ou une non-conformite :
+
+     1. Ce qui bloque une mise en ligne (idv, idc, Official Rules) doit se voir
+        sans lire la ligne — d'ou le rail de ligne et les jetons `flag`.
+     2. « Vide » ne se lit pas « zero » — d'ou `.na`, gris, non numerique.
+     3. Ce qui est irreversible ou facture (publier, dupliquer, exporter des
+        donnees personnelles, l'URL de sortie) porte son avertissement a cote
+        du bouton — d'ou la zone `caution` et `.btn-caution`.
+
+   Tout passe par des variables : aucune couleur litterale sur un element, elle
+   serait juste dans un theme et fausse dans l'autre.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   1. Jetons — theme clair (defaut)
+   ------------------------------------------------------------------------ */
+:root {
+    /* Pile systeme : le back-office doit s'afficher meme si le CDN tombe. */
+    --ts-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+               Arial, "Noto Sans", sans-serif;
+    --ts-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", "Courier New", monospace;
+
+    /* Echelle typographique — rapport ~1.2, tronquee a ce dont on se sert. */
+    --ts-fs-micro: .6875rem;   /* 11px — libelles d'en-tete, jetons, hints */
+    --ts-fs-xs:    .75rem;     /* 12px — meta, badges */
+    --ts-fs-sm:    .8125rem;   /* 13px — tableaux, code */
+    --ts-fs-base:  .875rem;    /* 14px — corps */
+    --ts-fs-md:    1rem;       /* 16px — sous-titres */
+    --ts-fs-lg:    1.125rem;   /* 18px — titre d'ecran */
+    --ts-fs-xl:    1.75rem;    /* 28px — chiffres du tableau de bord */
+
+    /* Espacement — multiples de 4px, six crans. */
+    --ts-sp-1: .25rem;
+    --ts-sp-2: .5rem;
+    --ts-sp-3: .75rem;
+    --ts-sp-4: 1rem;
+    --ts-sp-5: 1.5rem;
+    --ts-sp-6: 2rem;
+
+    /* Rayons — deux valeurs, pas plus. */
+    --ts-radius-sm: 4px;
+    --ts-radius:    7px;
+
+    /* Surfaces */
+    --ts-canvas:      #f2f3f6;
+    --ts-surface:     #ffffff;
+    --ts-surface-alt: #f7f8fa;
+    --ts-line:        #e2e5ea;
+    --ts-line-strong: #ccd1d9;
+
+    /* Texte */
+    --ts-text:        #15181d;
+    --ts-text-strong: #000000;
+    --ts-text-muted:  #5b6270;   /* 6.2:1 sur blanc */
+
+    /* Accent — teal. Action et position courante, jamais decoration.
+       Volontairement eloigne des couleurs de statut, et distinct des themes de
+       concours (bleu Amazon, jaune Walmart) qu'on previsualise ici. */
+    --ts-accent:        #0d6e6e;
+    --ts-accent-hover:  #0b5f5f;
+    --ts-accent-active: #094f4f;
+    --ts-accent-text:   #0b5f5f;
+    --ts-accent-soft:   #e2f1f1;
+    --ts-accent-line:   #a9d5d5;
+
+    /* Statut — fond, texte, filet. Meme semantique dans les deux themes :
+       vert = en ligne, ambre = a surveiller, rouge = casse, gris = neutre,
+       ardoise = terminal, bleu = information. */
+    --ts-ok-bg:   #e3f5e9;  --ts-ok-fg:   #146c37;  --ts-ok-line:   #b5e2c6;
+    --ts-warn-bg: #fdf0d5;  --ts-warn-fg: #8a5a06;  --ts-warn-line: #f2d79a;
+    --ts-bad-bg:  #fde8e8;  --ts-bad-fg:  #b02020;  --ts-bad-line:  #f4c2c2;
+    --ts-info-bg: #e5f0fb;  --ts-info-fg: #10558c;  --ts-info-line: #bcd8f1;
+    --ts-mute-bg: #eceef2;  --ts-mute-fg: #4d5461;  --ts-mute-line: #d6dae1;
+    --ts-dark-bg: #dfe2e8;  --ts-dark-fg: #22262e;  --ts-dark-line: #c4c9d2;
+
+    --ts-code-bg: rgba(15, 23, 42, .055);
+    --ts-shadow:    0 1px 2px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .04);
+    --ts-shadow-lg: 0 4px 6px -1px rgba(15, 23, 42, .07), 0 10px 24px -6px rgba(15, 23, 42, .12);
+}
+
+/* ---------------------------------------------------------------------------
+   2. Jetons — theme sombre
+   ------------------------------------------------------------------------ */
+[data-bs-theme="dark"] {
+    --ts-canvas:      #0e1015;
+    --ts-surface:     #171a21;
+    --ts-surface-alt: #1d212a;
+    --ts-line:        #282d38;
+    --ts-line-strong: #363c49;
+
+    --ts-text:        #e5e8ee;
+    --ts-text-strong: #ffffff;
+    --ts-text-muted:  #99a1b0;   /* 6.9:1 sur la surface */
+
+    --ts-accent:        #109393;
+    --ts-accent-hover:  #14a5a5;
+    --ts-accent-active: #18b6b6;
+    --ts-accent-text:   #6fd4d4;
+    --ts-accent-soft:   rgba(20, 165, 165, .16);
+    --ts-accent-line:   rgba(20, 165, 165, .38);
+
+    /* Sur fond sombre une couleur saturee vibre : fonds tres transparents,
+       textes desatures, rouge adouci. */
+    --ts-ok-bg:   rgba(34, 197, 94, .15);   --ts-ok-fg:   #6ee7a0;  --ts-ok-line:   rgba(34, 197, 94, .32);
+    --ts-warn-bg: rgba(245, 158, 11, .15);  --ts-warn-fg: #fbc55a;  --ts-warn-line: rgba(245, 158, 11, .32);
+    --ts-bad-bg:  rgba(239, 68, 68, .15);   --ts-bad-fg:  #f87171;  --ts-bad-line:  rgba(239, 68, 68, .34);
+    --ts-info-bg: rgba(56, 148, 230, .16);  --ts-info-fg: #7cc0f5;  --ts-info-line: rgba(56, 148, 230, .34);
+    --ts-mute-bg: rgba(148, 163, 184, .14); --ts-mute-fg: #b2bbc9;  --ts-mute-line: rgba(148, 163, 184, .28);
+    --ts-dark-bg: rgba(226, 232, 240, .13); --ts-dark-fg: #dbe1ea;  --ts-dark-line: rgba(226, 232, 240, .26);
+
+    --ts-code-bg: rgba(148, 163, 184, .14);
+    --ts-shadow:    0 1px 2px rgba(0, 0, 0, .5);
+    --ts-shadow-lg: 0 10px 30px -8px rgba(0, 0, 0, .7);
+}
+
+/* ---------------------------------------------------------------------------
+   3. Raccordement a Bootstrap
+   Rebrancher ces variables suffit a reteinter tout le back-office sans
+   reecrire un seul composant.
+   ------------------------------------------------------------------------ */
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-body-bg:          var(--ts-canvas);
+    --bs-body-color:       var(--ts-text);
+    --bs-emphasis-color:   var(--ts-text-strong);
+    --bs-secondary-color:  var(--ts-text-muted);
+    --bs-secondary-bg:     var(--ts-surface-alt);
+    --bs-tertiary-bg:      var(--ts-surface-alt);
+    --bs-border-color:     var(--ts-line);
+    --bs-link-color:       var(--ts-accent-text);
+    --bs-link-hover-color: var(--ts-accent-hover);
+    --bs-code-color:       var(--ts-text);
+    --bs-dropdown-bg:      var(--ts-surface);
+    --bs-dropdown-link-hover-bg: var(--ts-surface-alt);
+    --bs-dropdown-border-color:  var(--ts-line);
+    --bs-border-radius:    var(--ts-radius);
+    --bs-border-radius-sm: var(--ts-radius-sm);
+    --bs-border-radius-lg: var(--ts-radius);
+    --bs-font-sans-serif:  var(--ts-sans);
+    --bs-font-monospace:   var(--ts-mono);
+}
+
+/* ---------------------------------------------------------------------------
+   4. Base
+   ------------------------------------------------------------------------ */
+body {
+    font-family: var(--ts-sans);
+    font-size: var(--ts-fs-base);
+    line-height: 1.5;
+    background-color: var(--ts-canvas);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 { letter-spacing: -.011em; }
+h1.h4, .page-title { font-size: var(--ts-fs-lg); font-weight: 600; margin: 0; }
+
+a { text-underline-offset: .2em; }
+hr { border-color: var(--ts-line); opacity: 1; }
+
+/* Anneau de focus visible : l'operateur navigue beaucoup au clavier. */
+:focus-visible {
+    outline: 2px solid var(--ts-accent);
+    outline-offset: 2px;
+    border-radius: var(--ts-radius-sm);
+}
+::selection { background: var(--ts-accent-soft); }
+
+/* Code — un slug, un idv, un subid, une empreinte. Pastille discrete pour le
+   detacher du texte courant sans crier. */
+code {
+    font-family: var(--ts-mono);
+    font-size: var(--ts-fs-sm);
+    color: var(--bs-code-color);
+    background: var(--ts-code-bg);
+    padding: .08em .32em;
+    border-radius: var(--ts-radius-sm);
+    word-break: break-word;
+}
+code.small { font-size: var(--ts-fs-xs); }
+.form-text code { padding: .1em .35em; }
+
+/* ---------------------------------------------------------------------------
+   5. Barre de navigation
+   ------------------------------------------------------------------------ */
+.navbar-main {
+    background: var(--ts-surface);
+    border-bottom: 1px solid var(--ts-line) !important;
+    padding-top: .4rem;
+    padding-bottom: .4rem;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+.navbar-main .navbar-nav { align-items: center; gap: .125rem; }
+
+.navbar-main .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: var(--ts-fs-md);
+    font-weight: 650;
+    letter-spacing: -.01em;
+    color: var(--ts-text-strong);
+    margin-right: var(--ts-sp-4);
+}
+/* Marque : l'unique surface pleinement accentuee de l'ecran. */
+.brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: var(--ts-radius-sm);
+    background: var(--ts-accent);
+    color: #fff;
+    font-size: .95rem;
+}
+
+.navbar-main .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    line-height: 1;
+    font-size: var(--ts-fs-sm);
+    padding: .45rem .6rem;
+    border-radius: var(--ts-radius-sm);
+    color: var(--ts-text-muted);
+    white-space: nowrap;
+}
+.navbar-main .nav-link .bi { font-size: .95em; opacity: .85; }
+.navbar-main .nav-link:hover,
+.navbar-main .nav-link:focus { color: var(--ts-text); background: var(--ts-surface-alt); }
+.navbar-main .nav-link.active {
+    color: var(--ts-accent-text);
+    background: var(--ts-accent-soft);
+    font-weight: 600;
+}
+.navbar-main .nav-link.active .bi { opacity: 1; }
+
+/* Un groupe de navigation separe du precedent : les ecrans de mesure ne se
+   confondent pas avec les ecrans d'edition. */
+.nav-sep {
+    display: inline-block;
+    width: 1px;
+    height: 1.4rem;
+    align-self: center;
+    background: var(--ts-line-strong);
+    margin: 0 var(--ts-sp-2);
+}
+
+.navbar-main .dropdown-menu { box-shadow: var(--ts-shadow-lg); border-color: var(--ts-line); }
+.navbar-main .dropdown-item { font-size: var(--ts-fs-sm); }
+
+/* ---------------------------------------------------------------------------
+   6. En-tete d'ecran — titre, contexte, actions, filtres
+   ------------------------------------------------------------------------ */
+.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--ts-sp-3);
+    margin-bottom: var(--ts-sp-4);
+}
+.page-head .page-sub {
+    font-size: var(--ts-fs-xs);
+    color: var(--ts-text-muted);
+    margin-top: .15rem;
+}
+.page-head .page-sub a { text-decoration: none; }
+.page-actions { display: flex; align-items: center; gap: var(--ts-sp-2); flex-wrap: wrap; }
+
+/* Fil de retour d'une fiche : au-dessus du titre, pas apres le formulaire. */
+.page-back {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: var(--ts-fs-xs);
+    color: var(--ts-text-muted);
+    text-decoration: none;
+}
+.page-back:hover { color: var(--ts-text); }
+
+/* Barre de filtres : chaque controle porte son etiquette, sinon on ne sait
+   pas ce qu'on filtre en revenant sur l'ecran. */
+.filter-bar { display: flex; align-items: flex-end; gap: var(--ts-sp-2); flex-wrap: wrap; }
+.filter {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: var(--ts-surface);
+    border: 1px solid var(--ts-line);
+    border-radius: var(--ts-radius-sm);
+    padding: .1rem .1rem .1rem .55rem;
+}
+.filter-label {
+    font-size: var(--ts-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    color: var(--ts-text-muted);
+    white-space: nowrap;
+}
+.filter .form-select,
+.filter .form-control {
+    border: 0;
+    background-color: transparent;
+    box-shadow: none;
+    padding: .25rem .35rem;
+    font-size: var(--ts-fs-sm);
+    width: auto;
+    min-height: 1.9rem;
+    color: var(--ts-text);
+}
+.filter .form-select { padding-right: 1.85rem; }
+.filter .form-select:focus, .filter .form-control:focus { box-shadow: none; }
+.filter--w6 .form-control { width: 6rem; }
+.filter--w4 .form-control { width: 4rem; }
+.filter--w9 .form-control { width: 9.5rem; }
+
+/* Note d'ecran : d'ou vient le chiffre, sur quoi il porte. Discrete, jamais
+   en gras — elle se lit une fois, pas a chaque passage. */
+.screen-note {
+    font-size: var(--ts-fs-xs);
+    color: var(--ts-text-muted);
+    border-left: 2px solid var(--ts-line-strong);
+    padding-left: var(--ts-sp-3);
+    margin-bottom: var(--ts-sp-3);
+    max-width: 95ch;
+    line-height: 1.55;
+}
+.screen-note + .screen-note { margin-top: calc(var(--ts-sp-3) * -1 + .35rem); }
+.screen-note strong { color: var(--ts-text); font-weight: 600; }
+
+/* Portee d'un total : il porte sur le jeu filtre, pas sur la page affichee.
+   Assez visible pour etre lu, assez sobre pour ne pas voler le chiffre. */
+.scope-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .35rem var(--ts-sp-3);
+    font-size: var(--ts-fs-xs);
+    color: var(--ts-text-muted);
+    background: var(--ts-surface-alt);
+    border: 1px solid var(--ts-line);
+    border-radius: var(--ts-radius-sm);
+    padding: .4rem var(--ts-sp-3);
+    margin-bottom: var(--ts-sp-3);
+}
+.scope-count {
+    font-size: var(--ts-fs-base);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--ts-text-strong);
+}
+.scope-page { margin-left: auto; white-space: nowrap; }
+
+/* ---------------------------------------------------------------------------
+   7. Cartes
+   ------------------------------------------------------------------------ */
+.card {
+    --bs-card-bg: var(--ts-surface);
+    --bs-card-border-color: var(--ts-line);
+    --bs-card-cap-bg: var(--ts-surface);
+    --bs-card-spacer-y: var(--ts-sp-4);
+    --bs-card-spacer-x: var(--ts-sp-4);
+    box-shadow: var(--ts-shadow);
+}
+.card-header {
+    border-bottom-color: var(--ts-line);
+    background: var(--ts-surface);
+    padding: .6rem var(--ts-sp-4);
+    font-size: var(--ts-fs-xs);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ts-text-muted);
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+.card-header .bi { font-size: 1em; }
+.card-header .btn { text-transform: none; letter-spacing: 0; }
+/* Precision d'en-tete : « — bloque la publication », « — liste blanche ».
+   Elle qualifie la section, elle ne doit pas peser comme le titre. */
+.card-header .hint {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: var(--ts-text-muted);
+    opacity: .9;
+}
+.card-header .ms-auto { text-transform: none; letter-spacing: 0; }
+
+/* Intitule de section a l'interieur d'une carte. */
+.section-title {
+    display: flex; align-items: baseline; gap: .5rem;
+    font-size: var(--ts-fs-xs); font-weight: 650; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--ts-text-muted);
+    margin-bottom: var(--ts-sp-2);
+}
+.section-title .hint { font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+/* ---------------------------------------------------------------------------
+   8. Tableaux — le coeur du produit
+   ------------------------------------------------------------------------ */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--ts-line);
+    --bs-table-hover-bg: var(--ts-surface-alt);
+    --bs-table-hover-color: var(--ts-text);
+    font-size: var(--ts-fs-sm);
+    margin-bottom: 0;
+}
+.table > :not(caption) > * > * { padding: .4rem .625rem; }
+.table > :not(:first-child) { border-top: 0; }
+
+.table thead th {
+    font-size: var(--ts-fs-micro);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ts-text-muted);
+    background: var(--ts-surface-alt);
+    white-space: nowrap;
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+    border-bottom: 0;
+    /* box-shadow plutot que border : survit a position:sticky. */
+    box-shadow: inset 0 -1px 0 var(--ts-line-strong);
+}
+.table tbody td {
+    border-bottom: 1px solid var(--ts-line);
+    vertical-align: middle;
+    color: var(--ts-text);
+}
+.table tbody tr:last-child > td { border-bottom: 0; }
+
+/* Le chiffre est le sujet : chasse fixe, alignement a droite. `.num` est la
+   classe historique des gabarits, elle reste valable. */
+.table td.num, .table th.num,
+.table td.text-end, .table th.text-end,
+.stat-value, .num, .kv-val {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+.num, .table td.num, .table th.num { text-align: right; }
+.table td.num, .table th.num, .table td.text-end, .table th.text-end { padding-right: var(--ts-sp-3); }
+
+/* Colonne qui identifie la ligne : c'est par elle qu'on entre dans le tableau. */
+.table td.cell-key { font-weight: 600; color: var(--ts-text-strong); }
+.table td.cell-key a { text-decoration: none; }
+.table td.cell-key a:hover { text-decoration: underline; }
+.table td.cell-meta { color: var(--ts-text-muted); }
+
+/* Tableaux larges : ils defilent chez eux, le corps de page ne part jamais en
+   scroll horizontal. */
+.card-table > .table-responsive:last-child {
+    border-bottom-left-radius: var(--ts-radius);
+    border-bottom-right-radius: var(--ts-radius);
+}
+/* Tableaux longs : hauteur bornee + thead colle, sinon l'operateur perd les
+   en-tetes des la moitie de l'ecran. */
+.table-scroll { max-height: min(calc(100vh - 18rem), 46rem); overflow: auto; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 2; }
+
+/* Ligne de total : elle porte sur le jeu filtre, pas sur la page. */
+.table tfoot td, .table tfoot th {
+    background: var(--ts-surface-alt);
+    font-weight: 650;
+    border-top: 2px solid var(--ts-line-strong);
+    color: var(--ts-text-strong);
+}
+.table tfoot .tfoot-scope {
+    font-weight: 400;
+    font-size: var(--ts-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ts-text-muted);
+}
+
+/* Les actions restent au meme endroit d'une ligne a l'autre : l'oeil ne les
+   cherche pas, la main y va. */
+.row-actions { white-space: nowrap; text-align: right; }
+.row-actions > * { vertical-align: middle; }
+.row-actions form { display: inline; }
+.row-actions .btn + .btn,
+.row-actions .btn + form,
+.row-actions form + form,
+.row-actions form + .btn { margin-left: .25rem; }
+
+/* Rail de ligne : une ligne bloquee se repere en balayant la colonne de
+   gauche, sans lire son contenu. Rouge = ne fonctionnera pas ;
+   ambre = fonctionne mais son revenu ou sa conformite est en jeu. */
+.table tbody tr.row-bad > td:first-child  { box-shadow: inset 3px 0 0 var(--ts-bad-fg); }
+.table tbody tr.row-warn > td:first-child { box-shadow: inset 3px 0 0 var(--ts-warn-fg); }
+.table tbody tr.row-off  > td { color: var(--ts-text-muted); }
+.table tbody tr.row-off .cell-key { color: var(--ts-text-muted); }
+
+/* ---------------------------------------------------------------------------
+   9. Badges de statut et jetons de blocage
+   Le mot reste toujours present : le statut ne passe jamais par la seule
+   couleur — l'ecran est lu vite, et parfois par un daltonien.
+   ------------------------------------------------------------------------ */
+.badge {
+    font-size: var(--ts-fs-micro);
+    font-weight: 600;
+    letter-spacing: .01em;
+    padding: .25em .5em;
+    border-radius: var(--ts-radius-sm);
+    border: 1px solid transparent;
+    vertical-align: baseline;
+}
+.badge .bi { font-size: .95em; margin-right: .1em; }
+
+.badge.text-bg-success,   .badge.bg-success   { color: var(--ts-ok-fg) !important;   background: var(--ts-ok-bg) !important;   border-color: var(--ts-ok-line); }
+.badge.text-bg-warning,   .badge.bg-warning   { color: var(--ts-warn-fg) !important; background: var(--ts-warn-bg) !important; border-color: var(--ts-warn-line); }
+.badge.text-bg-danger,    .badge.bg-danger    { color: var(--ts-bad-fg) !important;  background: var(--ts-bad-bg) !important;  border-color: var(--ts-bad-line); }
+.badge.text-bg-info,      .badge.bg-info      { color: var(--ts-info-fg) !important; background: var(--ts-info-bg) !important; border-color: var(--ts-info-line); }
+.badge.text-bg-secondary, .badge.bg-secondary { color: var(--ts-mute-fg) !important; background: var(--ts-mute-bg) !important; border-color: var(--ts-mute-line); }
+.badge.text-bg-dark,      .badge.bg-dark      { color: var(--ts-dark-fg) !important; background: var(--ts-dark-bg) !important; border-color: var(--ts-dark-line); }
+.badge.text-bg-light,     .badge.bg-light     { color: var(--ts-mute-fg) !important; background: var(--ts-mute-bg) !important; border-color: var(--ts-mute-line); }
+.badge.text-bg-light.text-dark { color: var(--ts-mute-fg) !important; }
+.badge.text-bg-primary,   .badge.bg-primary   { color: var(--ts-accent-text) !important; background: var(--ts-accent-soft) !important; border-color: var(--ts-accent-line); }
+
+/* Statut d'un concours. Le nom brut (`draft`, `published`…) est celui de la
+   base : c'est lui qui circule dans les exports et les tickets, on le garde. */
+.badge-status-draft     { color: var(--ts-mute-fg) !important; background: var(--ts-mute-bg) !important; border-color: var(--ts-mute-line); }
+.badge-status-published { color: var(--ts-ok-fg) !important;   background: var(--ts-ok-bg) !important;   border-color: var(--ts-ok-line); }
+.badge-status-paused    { color: var(--ts-warn-fg) !important; background: var(--ts-warn-bg) !important; border-color: var(--ts-warn-line); }
+.badge-status-ended     { color: var(--ts-dark-fg) !important; background: var(--ts-dark-bg) !important; border-color: var(--ts-dark-line); }
+
+/* Jeton de blocage — IDV MANQUANT, IDC MANQUANT, REGLES MANQUANTES.
+   Il ne dit pas un etat, il dit une consequence. Il est en capitales, borde
+   plein, et ne partage sa forme avec aucun autre badge : on le reconnait
+   avant de le lire. */
+.flag {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-size: var(--ts-fs-micro);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: .18em .45em;
+    border-radius: var(--ts-radius-sm);
+    border: 1px solid;
+    white-space: nowrap;
+    vertical-align: baseline;
+}
+.flag--bad  { color: var(--ts-bad-fg);  background: var(--ts-bad-bg);  border-color: var(--ts-bad-fg); }
+.flag--warn { color: var(--ts-warn-fg); background: var(--ts-warn-bg); border-color: var(--ts-warn-fg); }
+.flag .flag-why {
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: .85;
+}
+/* Classe historique des gabarits : elle continue de fonctionner. */
+.flag-blocking { font-size: var(--ts-fs-micro); font-weight: 700; letter-spacing: .04em; }
+
+/* Une pile de jetons dans une cellule ne doit pas faire grandir la ligne. */
+.flag-stack { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; }
+
+/* ---------------------------------------------------------------------------
+   10. Boutons et formulaires
+   ------------------------------------------------------------------------ */
+.btn {
+    --bs-btn-font-size: var(--ts-fs-sm);
+    --bs-btn-font-weight: 500;
+    --bs-btn-border-radius: var(--ts-radius-sm);
+    --bs-btn-padding-y: .35rem;
+    --bs-btn-padding-x: .7rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    white-space: nowrap;
+}
+.btn-sm { --bs-btn-font-size: var(--ts-fs-sm); --bs-btn-padding-y: .3rem; --bs-btn-padding-x: .6rem; }
+/* Cible >= 32 px meme sur les boutons de ligne de tableau. */
+.btn-xs {
+    --bs-btn-padding-y: .2rem;
+    --bs-btn-padding-x: .5rem;
+    --bs-btn-font-size: var(--ts-fs-xs);
+    min-height: 2rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--ts-accent);
+    --bs-btn-border-color: var(--ts-accent);
+    --bs-btn-hover-bg: var(--ts-accent-hover);
+    --bs-btn-hover-border-color: var(--ts-accent-hover);
+    --bs-btn-active-bg: var(--ts-accent-active);
+    --bs-btn-active-border-color: var(--ts-accent-active);
+    --bs-btn-disabled-bg: var(--ts-accent);
+    --bs-btn-disabled-border-color: var(--ts-accent);
+    --bs-btn-color: #fff;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+    --bs-btn-focus-shadow-rgb: 13, 110, 110;
+}
+.btn-outline-secondary {
+    --bs-btn-color: var(--ts-text);
+    --bs-btn-border-color: var(--ts-line-strong);
+    --bs-btn-hover-color: var(--ts-text);
+    --bs-btn-hover-bg: var(--ts-surface-alt);
+    --bs-btn-hover-border-color: var(--ts-line-strong);
+    --bs-btn-active-color: var(--ts-text);
+    --bs-btn-active-bg: var(--ts-surface-alt);
+    --bs-btn-active-border-color: var(--ts-line-strong);
+    background-color: var(--ts-surface);
+}
+.btn-outline-primary {
+    --bs-btn-color: var(--ts-accent-text);
+    --bs-btn-border-color: var(--ts-accent-line);
+    --bs-btn-hover-color: var(--ts-accent-text);
+    --bs-btn-hover-bg: var(--ts-accent-soft);
+    --bs-btn-hover-border-color: var(--ts-accent);
+    --bs-btn-active-color: var(--ts-accent-text);
+    --bs-btn-active-bg: var(--ts-accent-soft);
+    --bs-btn-active-border-color: var(--ts-accent);
+    background-color: var(--ts-surface);
+}
+.btn-outline-danger {
+    --bs-btn-color: var(--ts-bad-fg);
+    --bs-btn-border-color: var(--ts-bad-line);
+    --bs-btn-hover-color: var(--ts-bad-fg);
+    --bs-btn-hover-bg: var(--ts-bad-bg);
+    --bs-btn-hover-border-color: var(--ts-bad-fg);
+    --bs-btn-active-color: var(--ts-bad-fg);
+    --bs-btn-active-bg: var(--ts-bad-bg);
+    --bs-btn-active-border-color: var(--ts-bad-fg);
+    background-color: transparent;
+}
+.btn-link { --bs-btn-color: var(--ts-text-muted); --bs-btn-hover-color: var(--ts-text); text-decoration: none; }
+
+/* Action irreversible ou facturee : dupliquer, exporter des donnees
+   personnelles, publier. Elle ne se confond ni avec une action neutre ni avec
+   l'action principale de l'ecran — et elle porte son avertissement a cote. */
+.btn-caution {
+    --bs-btn-color: var(--ts-warn-fg);
+    --bs-btn-border-color: var(--ts-warn-line);
+    --bs-btn-hover-color: var(--ts-warn-fg);
+    --bs-btn-hover-bg: var(--ts-warn-bg);
+    --bs-btn-hover-border-color: var(--ts-warn-fg);
+    --bs-btn-active-color: var(--ts-warn-fg);
+    --bs-btn-active-bg: var(--ts-warn-bg);
+    --bs-btn-active-border-color: var(--ts-warn-fg);
+    background-color: var(--ts-surface);
+    border-style: dashed;
+}
+.caution-note {
+    font-size: var(--ts-fs-micro);
+    color: var(--ts-warn-fg);
+    line-height: 1.45;
+    max-width: 38ch;
+    text-align: right;
+}
+.caution-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+}
+
+.form-label {
+    font-size: var(--ts-fs-xs);
+    font-weight: 600;
+    color: var(--ts-text);
+    margin-bottom: .25rem;
+}
+.form-label .hint { font-weight: 400; color: var(--ts-text-muted); }
+.form-control, .form-select {
+    font-size: var(--ts-fs-base);
+    border-color: var(--ts-line-strong);
+    border-radius: var(--ts-radius-sm);
+    background-color: var(--ts-surface);
+    color: var(--ts-text);
+    padding: .375rem .625rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--ts-accent);
+    box-shadow: 0 0 0 3px var(--ts-accent-soft);
+}
+.form-control::placeholder { color: var(--ts-text-muted); opacity: .7; }
+.form-control[readonly] { background-color: var(--ts-surface-alt); }
+.form-control.font-monospace, textarea.font-monospace { font-size: var(--ts-fs-sm); }
+.form-select-sm, .form-control-sm { font-size: var(--ts-fs-sm); }
+.form-text { font-size: var(--ts-fs-xs); color: var(--ts-text-muted); margin-top: .25rem; line-height: 1.5; }
+.form-check-input { border-color: var(--ts-line-strong); background-color: var(--ts-surface); }
+.form-check-input:checked { background-color: var(--ts-accent); border-color: var(--ts-accent); }
+.form-check-input:focus { border-color: var(--ts-accent); box-shadow: 0 0 0 3px var(--ts-accent-soft); }
+.form-check-label { font-size: var(--ts-fs-base); }
+
+.form-control.is-invalid, .form-select.is-invalid { border-color: var(--ts-bad-fg); }
+.invalid-feedback { font-size: var(--ts-fs-xs); color: var(--ts-bad-fg); font-weight: 500; }
+
+/* Aide contextuelle et avertissement ne se lisent pas pareil : l'une explique,
+   l'autre annonce une consequence. */
+.form-warning {
+    color: var(--ts-warn-fg);
+    font-weight: 500;
+}
+.form-danger { color: var(--ts-bad-fg); font-weight: 500; }
+
+/* Champ média : la vignette de l'existant à gauche, le sélecteur à droite.
+   L'opérateur doit voir CE QU'IL REMPLACE avant de choisir un fichier — un
+   champ de téléversement seul ne dit pas s'il y a déjà un visuel, et on écrase
+   sans le savoir. */
+.media-field {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ts-sp-3);
+}
+.media-body { flex: 1 1 auto; min-width: 0; }
+.media-thumb {
+    flex: 0 0 auto;
+    width: 5.5rem;
+    height: 4rem;
+    object-fit: contain;
+    background: var(--ts-surface-alt);
+    border: 1px solid var(--ts-line);
+    border-radius: var(--ts-radius-sm);
+    padding: 2px;
+}
+.media-thumb--empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ts-text-muted);
+    font-size: 1.25rem;
+    border-style: dashed;
+}
+.form-control[type="file"] { padding: .3rem .5rem; }
+.form-control[type="file"]::file-selector-button {
+    background: var(--ts-surface-alt);
+    color: var(--ts-text);
+    border: 0;
+    border-right: 1px solid var(--ts-line);
+    padding: .3rem .6rem;
+    margin: -.3rem .6rem -.3rem -.5rem;
+    font-size: var(--ts-fs-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   11 bis. Éditeur riche (CKEditor 5)
+   Il arrive avec sa propre palette, claire en dur. Rebranchée sur nos jetons,
+   sinon la zone de saisie reste un rectangle blanc au milieu d'un écran sombre
+   — et le texte saisi y devient illisible.
+   ------------------------------------------------------------------------ */
+.ck.ck-editor { width: 100%; }
+.ck.ck-editor__editable_inline { padding-left: var(--ts-sp-3); padding-right: var(--ts-sp-3); }
+.ck-editor__editable { font-size: var(--ts-fs-base); line-height: 1.6; }
+.ck-content h2 { font-size: var(--ts-fs-lg); }
+.ck-content h3 { font-size: var(--ts-fs-md); }
+
+/* CKEditor injecte sa feuille A L'EXECUTION, donc APRES la nôtre : à
+   spécificité égale (`:root`), ce sont ses valeurs qui gagnent et l'éditeur
+   reste blanc au milieu d'un écran sombre. On passe donc par `html[...]`,
+   d'un cran plus spécifique. */
+html:root,
+html[data-bs-theme="light"],
+html[data-bs-theme="dark"] {
+    --ck-color-base-background: var(--ts-surface);
+    --ck-color-base-foreground: var(--ts-surface-alt);
+    --ck-color-base-border: var(--ts-line-strong);
+    --ck-color-base-text: var(--ts-text);
+    --ck-color-base-active: var(--ts-accent);
+    --ck-color-base-active-focus: var(--ts-accent-hover);
+    --ck-color-focus-border: var(--ts-accent);
+    --ck-color-focus-outer-shadow: var(--ts-accent-soft);
+    --ck-color-shadow-drop: var(--ts-shadow);
+    --ck-color-text: var(--ts-text);
+    --ck-color-toolbar-background: var(--ts-surface-alt);
+    --ck-color-toolbar-border: var(--ts-line);
+    --ck-color-panel-background: var(--ts-surface);
+    --ck-color-panel-border: var(--ts-line);
+    --ck-color-dropdown-panel-background: var(--ts-surface);
+    --ck-color-dropdown-panel-border: var(--ts-line);
+    --ck-color-button-default-background: transparent;
+    --ck-color-button-default-hover-background: var(--ts-line);
+    --ck-color-button-default-active-background: var(--ts-line);
+    --ck-color-button-on-background: var(--ts-accent-soft);
+    --ck-color-button-on-hover-background: var(--ts-accent-soft);
+    --ck-color-button-on-color: var(--ts-accent-text);
+    --ck-color-list-background: var(--ts-surface);
+    --ck-color-list-button-hover-background: var(--ts-surface-alt);
+    --ck-color-list-button-on-background: var(--ts-accent-soft);
+    --ck-color-list-button-on-text: var(--ts-accent-text);
+    --ck-color-input-background: var(--ts-surface);
+    --ck-color-input-border: var(--ts-line-strong);
+    --ck-color-input-text: var(--ts-text);
+    --ck-color-labeled-field-label-background: var(--ts-surface);
+    --ck-color-split-button-hover-background: var(--ts-line);
+    --ck-color-split-button-hover-border: var(--ts-line-strong);
+    --ck-border-radius: var(--ts-radius-sm);
+}
+/* Ceinture et bretelles : la zone de saisie et la barre d'outils sont
+   repeintes par des sélecteurs de classe, que la feuille injectée ne peut pas
+   supplanter. C'est le texte du règlement qui se lit ici — il ne doit jamais
+   être gris clair sur blanc. */
+.ck.ck-editor__main > .ck-editor__editable,
+.ck.ck-editor__main > .ck-editor__editable.ck-blurred {
+    background: var(--ts-surface) !important;
+    color: var(--ts-text) !important;
+    border-color: var(--ts-line-strong) !important;
+}
+.ck.ck-editor__main > .ck-editor__editable.ck-focused {
+    border-color: var(--ts-accent) !important;
+    box-shadow: 0 0 0 3px var(--ts-accent-soft) !important;
+}
+.ck.ck-toolbar {
+    background: var(--ts-surface-alt) !important;
+    border-color: var(--ts-line-strong) !important;
+}
+.ck.ck-button, .ck.ck-button.ck-off { color: var(--ts-text) !important; }
+.ck.ck-button.ck-on { color: var(--ts-accent-text) !important; background: var(--ts-accent-soft) !important; }
+.ck.ck-dropdown__panel, .ck.ck-list { background: var(--ts-surface) !important; border-color: var(--ts-line) !important; }
+.ck.ck-list__item .ck-button { color: var(--ts-text) !important; }
+.ck-content { color: var(--ts-text); }
+.ck-content blockquote { border-left-color: var(--ts-line-strong); color: var(--ts-text-muted); }
+.ck-content table td, .ck-content table th { border-color: var(--ts-line-strong) !important; }
+
+[data-bs-theme="dark"] .ck.ck-icon, [data-bs-theme="dark"] .ck.ck-button .ck-icon { color: var(--ts-text); }
+[data-bs-theme="dark"] .ck-source-editing-area textarea { background: var(--ts-surface); color: var(--ts-text); }
+
+/* ---------------------------------------------------------------------------
+   11. Alertes
+   ------------------------------------------------------------------------ */
+.alert {
+    font-size: var(--ts-fs-sm);
+    border-radius: var(--ts-radius);
+    border-width: 1px;
+    border-left-width: 3px;
+    padding: .625rem var(--ts-sp-3);
+}
+.alert-success { color: var(--ts-ok-fg);   background: var(--ts-ok-bg);   border-color: var(--ts-ok-line);   border-left-color: var(--ts-ok-fg); }
+.alert-warning { color: var(--ts-warn-fg); background: var(--ts-warn-bg); border-color: var(--ts-warn-line); border-left-color: var(--ts-warn-fg); }
+.alert-danger  { color: var(--ts-bad-fg);  background: var(--ts-bad-bg);  border-color: var(--ts-bad-line);  border-left-color: var(--ts-bad-fg); }
+.alert-info    { color: var(--ts-info-fg); background: var(--ts-info-bg); border-color: var(--ts-info-line); border-left-color: var(--ts-info-fg); }
+.alert-secondary { color: var(--ts-text); background: var(--ts-surface-alt); border-color: var(--ts-line); border-left-color: var(--ts-line-strong); }
+.alert a { color: inherit; }
+.alert .badge, .alert .flag { vertical-align: middle; }
+
+/* ---------------------------------------------------------------------------
+   12. Tuiles de chiffres
+   Un ecran de chiffres se lit en trois secondes : libelle discret, chiffre qui
+   domine, provenance en petit.
+   ------------------------------------------------------------------------ */
+.stat {
+    position: relative;
+    display: block;
+    background: var(--ts-surface);
+    border: 1px solid var(--ts-line);
+    border-radius: var(--ts-radius);
+    box-shadow: var(--ts-shadow);
+    padding: var(--ts-sp-3) var(--ts-sp-4);
+    height: 100%;
+    overflow: hidden;
+}
+.stat-label {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: var(--ts-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 650;
+    color: var(--ts-text-muted);
+}
+.stat-value {
+    font-size: var(--ts-fs-xl);
+    line-height: 1.1;
+    font-weight: 620;
+    letter-spacing: -.025em;
+    color: var(--ts-text-strong);
+    margin: .3rem 0 .15rem;
+}
+.stat-hint { font-size: var(--ts-fs-micro); color: var(--ts-text-muted); line-height: 1.35; }
+.stat-hint .num { display: inline; }
+/* Filigrane : un repere visuel sans une couleur de plus. */
+.stat-mark {
+    position: absolute;
+    right: -.35rem;
+    bottom: -.6rem;
+    font-size: 3.2rem;
+    line-height: 1;
+    color: var(--ts-text);
+    opacity: .05;
+    pointer-events: none;
+}
+/* Classes historiques des gabarits — conservees, reteintees. */
+.kpi { background: var(--ts-surface); border: 1px solid var(--ts-line); border-radius: var(--ts-radius); box-shadow: var(--ts-shadow); padding: var(--ts-sp-3) var(--ts-sp-4); height: 100%; }
+.kpi-label { font-size: var(--ts-fs-micro); text-transform: uppercase; letter-spacing: .06em; font-weight: 650; color: var(--ts-text-muted); }
+.kpi-value { font-size: var(--ts-fs-xl); font-weight: 620; letter-spacing: -.025em; color: var(--ts-text-strong); font-variant-numeric: tabular-nums; line-height: 1.1; margin: .3rem 0 .15rem; }
+
+/* Liste cle / valeur */
+.kv { list-style: none; margin: 0; padding: 0; }
+.kv li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ts-sp-3);
+    padding: .45rem var(--ts-sp-4);
+    border-bottom: 1px solid var(--ts-line);
+    font-size: var(--ts-fs-sm);
+}
+.kv li:last-child { border-bottom: 0; }
+.kv .kv-key { color: var(--ts-text-muted); }
+.kv .kv-val { font-weight: 650; color: var(--ts-text-strong); text-align: right; }
+.kv .kv-val.is-bad  { color: var(--ts-bad-fg); }
+.kv .kv-val.is-warn { color: var(--ts-warn-fg); }
+
+/* Barre de repartition : une valeur relative se compare mieux qu'elle ne se
+   lit. Elle double le chiffre, elle ne le remplace pas. */
+.bar {
+    display: block;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--ts-accent-soft);
+    overflow: hidden;
+    min-width: 3rem;
+}
+.bar > i { display: block; height: 100%; background: var(--ts-accent); }
+
+/* ---------------------------------------------------------------------------
+   13. Donnee absente
+   « Vide » ne se lit pas « zero » : un taux de clic sans impression n'est pas
+   0 %. Le tiret est gris, en italique, et ne prend pas le poids d'un chiffre.
+   ------------------------------------------------------------------------ */
+.na, .empty {
+    color: var(--ts-text-muted);
+    font-style: italic;
+    font-weight: 400;
+    font-variant-numeric: normal;
+    opacity: .85;
+}
+.stat-value .na, .kpi-value .na { font-size: var(--ts-fs-sm); }
+
+/* ---------------------------------------------------------------------------
+   14. Etats vides
+   Un ecran vide doit dire quoi faire ensuite, pas « aucune donnee ».
+   ------------------------------------------------------------------------ */
+.blank {
+    padding: var(--ts-sp-6) var(--ts-sp-4);
+    text-align: center;
+    max-width: 44rem;
+    margin: 0 auto;
+}
+.blank-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: var(--ts-surface-alt);
+    border: 1px solid var(--ts-line);
+    color: var(--ts-text-muted);
+    font-size: 1.25rem;
+    margin-bottom: var(--ts-sp-3);
+}
+.blank-title { font-size: var(--ts-fs-md); font-weight: 600; color: var(--ts-text); margin-bottom: .35rem; }
+.blank-text {
+    font-size: var(--ts-fs-sm);
+    color: var(--ts-text-muted);
+    margin: 0 auto var(--ts-sp-3);
+    max-width: 52ch;
+    line-height: 1.55;
+    font-style: normal;
+}
+.blank-actions { display: flex; gap: var(--ts-sp-2); justify-content: center; flex-wrap: wrap; }
+td > .blank { padding-top: var(--ts-sp-5); padding-bottom: var(--ts-sp-5); }
+
+/* ---------------------------------------------------------------------------
+   15. Zone a consequence — irreversible, facture, ou donnee personnelle
+   ------------------------------------------------------------------------ */
+.zone-caution {
+    border-color: var(--ts-warn-line) !important;
+    background: var(--ts-warn-bg);
+}
+.zone-caution > .card-header {
+    background: transparent;
+    color: var(--ts-warn-fg);
+    border-bottom-color: var(--ts-warn-line);
+}
+.zone-caution .form-text, .zone-caution p { color: var(--ts-warn-fg); }
+
+/* L'URL de sortie previsualisee : elle se lit, elle ne s'ouvre pas. Ce n'est
+   pas un lien, ce n'est pas cliquable, et elle le montre — un clic reel est
+   facture a l'annonceur et pollue le reporting. On peut en revanche la
+   copier : verifier hors ligne est sans effet de bord. */
+.url-preview {
+    display: block;
+    word-break: break-all;
+    padding: var(--ts-sp-3);
+    background: var(--ts-surface);
+    border: 1px solid var(--ts-warn-line);
+    border-left: 3px solid var(--ts-warn-fg);
+    border-radius: var(--ts-radius-sm);
+    font-family: var(--ts-mono);
+    font-size: var(--ts-fs-sm);
+    line-height: 1.65;
+    color: var(--ts-text);
+    user-select: all;
+    cursor: text;
+}
+.url-preview::selection, .url-preview *::selection { background: var(--ts-warn-line); }
+.no-open {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: var(--ts-fs-micro);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ts-bad-fg);
+    background: var(--ts-bad-bg);
+    border: 1px solid var(--ts-bad-fg);
+    border-radius: var(--ts-radius-sm);
+    padding: .18em .45em;
+}
+
+/* Copie : la seule manipulation sans effet de bord sur une URL de sortie. */
+.copy-btn.is-copied { color: var(--ts-ok-fg); border-color: var(--ts-ok-line); }
+
+/* ---------------------------------------------------------------------------
+   16. Preuve de consentement
+   C'est la piece qu'on produirait en cas de contestation : elle doit se lire
+   comme un document, pas comme une ligne de base. Le texte archive est
+   presente tel quel, jamais reformule, jamais tronque, jamais grise.
+   ------------------------------------------------------------------------ */
+.proof { border-bottom: 1px solid var(--ts-line); padding: var(--ts-sp-4) 0; }
+.proof:first-child { padding-top: 0; }
+.proof:last-child { border-bottom: 0; padding-bottom: 0; }
+.proof-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ts-sp-2);
+    margin-bottom: var(--ts-sp-2);
+}
+.proof-type { font-family: var(--ts-mono); font-size: var(--ts-fs-sm); font-weight: 600; }
+/* Le texte reellement affiche au participant. Pleine taille, pleine opacite :
+   c'est la seule chose qui compte dans le dossier. */
+.proof-text {
+    margin: 0 0 var(--ts-sp-3);
+    padding: var(--ts-sp-3);
+    background: var(--ts-surface-alt);
+    border-left: 2px solid var(--ts-line-strong);
+    border-radius: 0 var(--ts-radius-sm) var(--ts-radius-sm) 0;
+    font-size: var(--ts-fs-base);
+    line-height: 1.6;
+    color: var(--ts-text);
+}
+/* Les circonstances : quand, d'ou, sur quelle page, quelle empreinte. */
+.proof-meta { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; }
+.proof-meta li { display: flex; gap: var(--ts-sp-2); font-size: var(--ts-fs-xs); }
+.proof-meta .k {
+    flex: 0 0 7.5rem;
+    color: var(--ts-text-muted);
+    text-transform: uppercase;
+    font-size: var(--ts-fs-micro);
+    letter-spacing: .05em;
+    font-weight: 650;
+    padding-top: .1rem;
+}
+.proof-meta .v { font-family: var(--ts-mono); word-break: break-all; color: var(--ts-text); }
+
+/* Fiche participant : identite et contexte cote a cote, en lecture, pas en
+   formulaire. */
+.record { list-style: none; margin: 0; padding: 0; }
+.record li {
+    display: flex;
+    gap: var(--ts-sp-3);
+    padding: .3rem var(--ts-sp-4);
+    border-bottom: 1px solid var(--ts-line);
+    font-size: var(--ts-fs-sm);
+}
+.record li:last-child { border-bottom: 0; }
+.record .k {
+    flex: 0 0 9rem;
+    color: var(--ts-text-muted);
+    font-size: var(--ts-fs-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 650;
+    padding-top: .1rem;
+}
+.record .v { word-break: break-word; color: var(--ts-text); }
+.record .v.mono { font-family: var(--ts-mono); font-size: var(--ts-fs-sm); }
+.record-group {
+    padding: .45rem var(--ts-sp-4);
+    background: var(--ts-surface-alt);
+    border-bottom: 1px solid var(--ts-line);
+    font-size: var(--ts-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 650;
+    color: var(--ts-text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   17. Ecran de connexion
+   ------------------------------------------------------------------------ */
+body.auth {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(60rem 34rem at 50% -12rem, var(--ts-accent-soft), transparent 65%),
+        var(--ts-canvas);
+}
+body.auth main { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; }
+.login { width: 100%; max-width: 22.5rem; padding: var(--ts-sp-5) var(--ts-sp-4); }
+.login-brand { text-align: center; margin-bottom: var(--ts-sp-5); }
+.login-brand .brand-mark { width: 2.5rem; height: 2.5rem; font-size: 1.4rem; border-radius: var(--ts-radius); }
+.login-name {
+    font-size: 1.35rem;
+    font-weight: 650;
+    letter-spacing: -.02em;
+    color: var(--ts-text-strong);
+    margin: var(--ts-sp-3) 0 .2rem;
+}
+.login-tagline { font-size: var(--ts-fs-xs); color: var(--ts-text-muted); margin: 0; }
+.login .card { box-shadow: var(--ts-shadow-lg); }
+.login .card-body { padding: var(--ts-sp-5); }
+.login .form-control { padding: .5rem .7rem; font-size: var(--ts-fs-md); }
+.login .btn-primary { padding: .5rem; font-size: var(--ts-fs-base); font-weight: 600; }
+.login-foot { text-align: center; font-size: var(--ts-fs-micro); color: var(--ts-text-muted); margin-top: var(--ts-sp-4); }
+
+/* ---------------------------------------------------------------------------
+   18. Pied de page
+   ------------------------------------------------------------------------ */
+.app-foot {
+    font-size: var(--ts-fs-micro);
+    color: var(--ts-text-muted);
+    border-top: 1px solid var(--ts-line);
+    margin-top: var(--ts-sp-5);
+    padding-top: var(--ts-sp-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ts-sp-2) var(--ts-sp-4);
+}
+
+/* ---------------------------------------------------------------------------
+   19. Divers
+   ------------------------------------------------------------------------ */
+.text-muted, .text-body-secondary { color: var(--ts-text-muted) !important; }
+.text-danger  { color: var(--ts-bad-fg) !important; }
+.text-success { color: var(--ts-ok-fg) !important; }
+.text-warning { color: var(--ts-warn-fg) !important; }
+.bg-body-tertiary { background-color: var(--ts-surface-alt) !important; }
+.pagination { --bs-pagination-bg: var(--ts-surface); --bs-pagination-color: var(--ts-text); --bs-pagination-border-color: var(--ts-line); --bs-pagination-hover-bg: var(--ts-surface-alt); --bs-pagination-hover-color: var(--ts-text); --bs-pagination-active-bg: var(--ts-accent); --bs-pagination-active-border-color: var(--ts-accent); --bs-pagination-disabled-bg: var(--ts-surface); --bs-pagination-disabled-border-color: var(--ts-line); font-size: var(--ts-fs-sm); }
+
+/* Pastille de couleur du theme d'un concours : elle montre ce que verra le
+   visiteur. Les seules couleurs litterales de l'ecran viennent de la base. */
+.swatch {
+    display: inline-block;
+    width: 1.5rem; height: 1.5rem;
+    border-radius: var(--ts-radius-sm);
+    border: 1px solid var(--ts-line-strong);
+    vertical-align: middle;
+    flex: 0 0 auto;
+}
+.swatch-row { display: flex; align-items: center; gap: var(--ts-sp-2); }
+
+@media (max-width: 991.98px) {
+    .navbar-main .navbar-nav { align-items: stretch; gap: 0; }
+    .navbar-main .nav-link { padding: .5rem .6rem; }
+    .nav-sep { display: none; }
+    .page-head { align-items: flex-start; }
+    .record .k, .proof-meta .k { flex-basis: 7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}

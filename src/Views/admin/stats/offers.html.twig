@@ -2,56 +2,101 @@
 {% block title %}Statistiques — offres{% endblock %}
 
 {% block content %}
-    <h1 class="h4 mb-3">Performance par offre</h1>
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Performance par offre</h1>
+            <div class="page-sub">Du {{ from }} au {{ to }} · le revenu est rattaché par <code>idc</code></div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/offers"><i class="bi bi-badge-ad"></i> Fiches offres</a>
+        </div>
+    </div>
+
     {% include 'admin/stats/_period.html.twig' %}
 
     {% if rows is empty %}
-        <div class="card card-body empty">Aucune offre sur la période.</div>
-    {% else %}
         <div class="card">
-            <table class="table table-sm mb-0 align-middle">
-                <thead>
-                <tr>
-                    <th>Offre</th><th>Annonceur</th><th>Statut</th>
-                    <th class="text-end">Impressions</th><th class="text-end">Clics</th>
-                    <th class="text-end">CTR</th><th class="text-end">Revenu</th>
-                    <th class="text-end">eCPM période</th><th class="text-end">eCPM 15 j</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for r in rows %}
-                    <tr>
-                        <td><a href="/admin/offers/{{ r.offer_id }}/edit">{{ r.offer_name }}</a></td>
-                        <td class="small">{{ r.offer_advertiser ?: '—' }}</td>
-                        <td>
-                            {% if r.offer_active %}
-                                <span class="badge bg-success">active</span>
-                            {% else %}
-                                <span class="badge bg-secondary">inactive</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end">{{ r.impressions|number_format(0, ',', ' ') }}</td>
-                        <td class="text-end">{{ r.clicks|number_format(0, ',', ' ') }}</td>
-                        <td class="text-end">
-                            {% if r.impressions > 0 %}
-                                {{ (r.clicks / r.impressions * 100)|number_format(2) }} %
-                            {% else %}<span class="empty">—</span>{% endif %}
-                        </td>
-                        <td class="text-end">${{ r.revenue|number_format(2) }}</td>
-                        <td class="text-end">
-                            {% if r.impressions > 0 %}
-                                ${{ (r.revenue / r.impressions * 1000)|number_format(4) }}
-                            {% else %}<span class="empty">—</span>{% endif %}
-                        </td>
-                        <td class="text-end">{{ r.offer_ecpm_15d }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            {% include 'admin/_blank.html.twig' with {
+                'icon': 'bar-chart',
+                'title': 'Aucune offre sur la période',
+                'text': "Une offre n'apparaît ici qu'à partir de sa première impression. Vérifiez qu'un concours publié a bien des offres rattachées, qu'elles sont actives et qu'aucune ne se voit écartée faute d'idv — puis élargissez la période.",
+                'cta_url': '/admin/offers',
+                'cta_label': 'Vérifier les offres',
+                'cta_icon': 'badge-ad'
+            } only %}
         </div>
-        <p class="form-text mt-2">
-            L'eCPM sur 15 jours est celui qui pilote l'ordre d'affichage. Une offre sous le seuil
-            d'impressions passe par l'exploration : son eCPM n'est pas encore significatif.
+    {% else %}
+        <div class="card card-table">
+            <div class="table-responsive table-scroll">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th>Offre</th><th>Annonceur</th><th>Diffusion</th>
+                        <th class="num">Impressions</th><th class="num">Clics</th>
+                        <th class="num">CTR</th><th class="num">Revenu</th>
+                        <th class="num">eCPM période</th><th class="num">eCPM 15 j</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in rows %}
+                        <tr class="{{ r.offer_active ? '' : 'row-off' }}">
+                            <td class="cell-key"><a href="/admin/offers/{{ r.offer_id }}/edit">{{ r.offer_name }}</a></td>
+                            <td class="cell-meta">{{ r.offer_advertiser ?: '—' }}</td>
+                            <td>
+                                {% if r.offer_active %}
+                                    <span class="badge text-bg-success">active</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary" title="Ces chiffres sont ceux d'une offre qui ne tourne plus : elle ne les refera pas.">inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="num">{{ r.impressions|number_format(0, ',', ' ') }}</td>
+                            <td class="num">{{ r.clicks|number_format(0, ',', ' ') }}</td>
+                            <td class="num">
+                                {# Une offre sans impression sur la période n'a pas un CTR de 0 %. #}
+                                {% if r.impressions > 0 %}
+                                    {{ (r.clicks / r.impressions * 100)|number_format(2) }} %
+                                {% else %}<span class="na">pas d'impression</span>{% endif %}
+                            </td>
+                            <td class="num">${{ r.revenue|number_format(2) }}</td>
+                            <td class="num">
+                                {% if r.impressions > 0 %}
+                                    ${{ (r.revenue / r.impressions * 1000)|number_format(4) }}
+                                {% else %}<span class="na">—</span>{% endif %}
+                            </td>
+                            <td class="num">{{ r.offer_ecpm_15d }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="3">
+                            <span class="tfoot-scope">Total — période entière, {{ rows|length }} offres</span>
+                        </td>
+                        <td class="num">{{ totals.impressions|number_format(0, ',', ' ') }}</td>
+                        <td class="num">{{ totals.clicks|number_format(0, ',', ' ') }}</td>
+                        <td class="num">
+                            {% if totals.ctr is null %}<span class="na">—</span>{% else %}{{ totals.ctr }} %{% endif %}
+                        </td>
+                        <td class="num">${{ totals.revenue|number_format(2) }}</td>
+                        <td class="num">
+                            {% if totals.ecpm is null %}<span class="na">—</span>{% else %}${{ totals.ecpm|number_format(4) }}{% endif %}
+                        </td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <p class="screen-note mt-3">
+            <strong>eCPM période</strong> est calculé sur la fenêtre affichée ci-dessus.
+            <strong>eCPM 15 j</strong> est celui qui pilote réellement l'ordre d'affichage du parcours :
+            les deux diffèrent, et c'est normal — comparer une offre à elle-même sur les deux colonnes
+            dit si elle est en train de monter ou de retomber.
+        </p>
+        <p class="screen-note">
+            Une offre sous le seuil d'impressions passe par l'exploration : son eCPM n'est pas encore
+            significatif, et un chiffre bas ne justifie pas encore de la couper.
         </p>
     {% endif %}
 {% endblock %}

@@ -1,25 +1,29 @@
 {% extends 'front/layout.html.twig' %}
 
-{% block title %}Thank you — {{ sweepstake.sweepstake_name }}{% endblock %}
+{% block title %}You&rsquo;re entered — {{ sweepstake.sweepstake_name }}{% endblock %}
 
 {% block content %}
-    <section class="thankyou">
-        <h1>🎉 Thank you — your entry is confirmed</h1>
+    <section class="card thankyou">
+        <p class="thankyou-mark">
+            {% include 'front/partials/icon.html.twig' with {'name': 'trophy', 'size': 40} only %}
+        </p>
+        <h1>You&rsquo;re entered!</h1>
 
         {% if sweepstake.sweepstake_thankyou_html %}
             {{ sweepstake.sweepstake_thankyou_html|raw }}
         {% else %}
             <p class="lead">
-                You&rsquo;re in the running for the
-                <strong>{{ sweepstake.sweepstake_prize_title ?: sweepstake.sweepstake_name }}</strong>.
+                Your entry for the
+                <strong>{{ sweepstake.sweepstake_prize_title ?: sweepstake.sweepstake_name }}</strong>
+                is confirmed.
             </p>
-            <p>
+            <p class="lead">
                 Winners are selected in a random drawing and contacted using the details you
                 provided. Full details are in the
                 <a href="/{{ sweepstake.sweepstake_slug }}/rules">Official Rules</a>.
             </p>
         {% endif %}
 
-        <a class="btn btn-secondary" href="/">See other sweepstakes</a>
+        <a class="btn btn-outline btn-block" href="/">See other sweepstakes</a>
     </section>
 {% endblock %}

@@ -53,46 +53,57 @@ final class StatsController
         ]);
     }
 
-    /** Performance par source d'acquisition. */
+    /**
+     * Performance par source d'acquisition.
+     *
+     * L'ecran part des **participations** et non des revenus. C'est
+     * volontaire : une source qui apporte du volume sans rien rapporter
+     * n'apparaitrait pas si l'on partait de `t_offer_revenue_daily`, alors que
+     * c'est exactement celle qu'il faut voir — elle coute son cout
+     * d'acquisition et ne le rembourse pas.
+     */
     public function sources(Request $request, Response $response): Response
     {
         [$from, $to] = $this->period($request);
         $connection = $this->database->connection();
 
-        $rows = $connection->fetchAllAssociative(
-            'SELECT COALESCE(NULLIF(r.offer_revenue_daily_subid, ""), "(direct)") AS subid,
-                    SUM(r.offer_revenue_daily_impressions) AS impressions,
-                    SUM(r.offer_revenue_daily_clicks)      AS clicks,
-                    SUM(r.offer_revenue_daily_revenue)     AS revenue
-               FROM t_offer_revenue_daily r
-              WHERE r.offer_revenue_daily_date BETWEEN :from AND :to
-              GROUP BY subid
-              ORDER BY revenue DESC',
-            ['from' => $from, 'to' => $to]
+        // Participations et qualite des numeros, par source.
+        //
+        // Le telephone est obligatoire : son taux de collecte vaut toujours
+        // 100 % et n'apprend rien. Ce qui distingue une source d'une autre,
+        // c'est la part de numeros assortis d'un consentement TCPA, donc
+        // reellement demarchables.
+        $entries = $connection->fetchAllAssociative(
+            'SELECT COALESCE(NULLIF(l.lead_subid, ""), "(direct)") AS subid,
+                    COUNT(DISTINCT l.lead_id) AS entries,
+                    COUNT(DISTINCT IF(l.lead_phone != "", l.lead_id, NULL)) AS phones,
+                    COUNT(DISTINCT IF(c.lead_consent_granted = 1, l.lead_id, NULL)) AS tcpa_granted
+               FROM t_lead l
+               LEFT JOIN t_lead_consent c
+                      ON c.lead_consent_id_lead = l.lead_id
+                     AND c.lead_consent_type = :type
+              WHERE l.lead_status = :status
+                AND DATE(l.created_at) BETWEEN :from AND :to
+              GROUP BY subid',
+            ['type' => 'tcpa_phone', 'status' => 'complete', 'from' => $from, 'to' => $to]
         );
 
-        // Participations par source, pour rapporter le revenu au volume :
-        // c'est le revenu par participation qui dit si une source est rentable,
-        // pas le revenu brut.
-        $entries = $connection->fetchAllAssociative(
-            'SELECT COALESCE(NULLIF(lead_subid, ""), "(direct)") AS subid, COUNT(*) AS entries
-               FROM t_lead
-              WHERE lead_status = "complete" AND DATE(created_at) BETWEEN :from AND :to
+        $revenue = $connection->fetchAllAssociative(
+            'SELECT COALESCE(NULLIF(offer_revenue_daily_subid, ""), "(direct)") AS subid,
+                    SUM(offer_revenue_daily_impressions) AS impressions,
+                    SUM(offer_revenue_daily_clicks)      AS clicks,
+                    SUM(offer_revenue_daily_revenue)     AS revenue
+               FROM t_offer_revenue_daily
+              WHERE offer_revenue_daily_date BETWEEN :from AND :to
               GROUP BY subid',
             ['from' => $from, 'to' => $to]
         );
 
-        $bySubid = [];
-        foreach ($entries as $row) {
-            $bySubid[(string) $row['subid']] = (int) $row['entries'];
-        }
-        foreach ($rows as $i => $row) {
-            $count = $bySubid[(string) $row['subid']] ?? 0;
-            $rows[$i]['entries'] = $count;
-            $rows[$i]['revenue_per_entry'] = $count > 0
-                ? round((float) $row['revenue'] / $count, 4)
-                : null;
-        }
+        $rows = $this->mergeSources($entries, $revenue);
+
+        // Le revenu decroissant en tete, mais les sources sans revenu restent
+        // dans le tableau : ce sont elles qui posent question.
+        usort($rows, static fn(array $a, array $b): int => $b['revenue'] <=> $a['revenue']);
 
         return $this->view->render($response, 'admin/stats/sources.html.twig', [
             'rows' => $rows,
@@ -100,6 +111,63 @@ final class StatsController
             'to' => $to,
             'totals' => $this->totals($rows),
         ]);
+    }
+
+    /**
+     * Fusionne participations et revenus sur l'ensemble des sources connues de
+     * l'une ou l'autre origine.
+     *
+     * @param list<array<string,mixed>> $entries
+     * @param list<array<string,mixed>> $revenue
+     * @return list<array<string,mixed>>
+     */
+    private function mergeSources(array $entries, array $revenue): array
+    {
+        $rows = [];
+
+        foreach ($entries as $row) {
+            $subid = (string) $row['subid'];
+            $phones = (int) $row['phones'];
+            $granted = (int) $row['tcpa_granted'];
+            $rows[$subid] = [
+                'subid' => $subid,
+                'entries' => (int) $row['entries'],
+                'phones' => $phones,
+                'tcpa_granted' => $granted,
+                'tcpa_rate' => $phones > 0 ? round($granted / $phones * 100, 1) : null,
+                'impressions' => 0,
+                'clicks' => 0,
+                'revenue' => 0.0,
+            ];
+        }
+
+        foreach ($revenue as $row) {
+            $subid = (string) $row['subid'];
+            // Revenu sans participation sur la periode : la participation date
+            // d'avant la fenetre, mais la regie a paye dedans. La source doit
+            // apparaitre quand meme.
+            $rows[$subid] ??= [
+                'subid' => $subid,
+                'entries' => 0,
+                'phones' => 0,
+                'tcpa_granted' => 0,
+                'tcpa_rate' => null,
+                'impressions' => 0,
+                'clicks' => 0,
+                'revenue' => 0.0,
+            ];
+            $rows[$subid]['impressions'] = (int) $row['impressions'];
+            $rows[$subid]['clicks'] = (int) $row['clicks'];
+            $rows[$subid]['revenue'] = (float) $row['revenue'];
+        }
+
+        foreach ($rows as $subid => $row) {
+            $rows[$subid]['revenue_per_entry'] = $row['entries'] > 0
+                ? round($row['revenue'] / $row['entries'], 4)
+                : null;
+        }
+
+        return array_values($rows);
     }
 
     /**

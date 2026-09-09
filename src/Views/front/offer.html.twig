@@ -1,0 +1,115 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Bonus offer {{ step }} of {{ total }} — {{ sweepstake.sweepstake_name }}{% endblock %}
+
+{% block content %}
+    {#
+        Une offre, une page.
+
+        Deux choses doivent se lire d'un coup d'oeil : la participation est
+        DEJA enregistree, et cette offre est facultative. Un visiteur qui croit
+        devoir cliquer pour valider son inscription clique par contrainte, et
+        l'annonceur recoit du trafic sans intention — c'est ainsi qu'une offre
+        se fait couper.
+    #}
+    <p class="entry-confirmed">
+        {% include 'front/partials/icon.html.twig' with {'name': 'check', 'size': 20} only %}
+        <span><strong>Your entry is confirmed.</strong> Nothing else is required — this offer is optional.</span>
+    </p>
+
+    <div class="progress-head">
+        {#
+            Meme calcul que le formulaire : l'etape en cours compte pour la
+            moitie d'elle-meme. Afficher 100 % sur la derniere offre, avant que
+            le visiteur ait rien fait, revient a lui dire que c'est fini alors
+            qu'un ecran reste — et le chiffre en pourcentage transforme un
+            parcours facultatif en quota a remplir.
+        #}
+        {% set percent = ((step * 2 - 1) * 100) // (total * 2) %}
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {{ percent }}%"
+                 role="progressbar" aria-valuenow="{{ step }}" aria-valuemin="0" aria-valuemax="{{ total }}"
+                 aria-valuetext="Bonus offer {{ step }} of {{ total }}"
+                 aria-label="Bonus offers progress"></div>
+        </div>
+        <p class="progress-label">
+            <span>Bonus offer {{ step }} of {{ total }}</span>
+            <span class="progress-optional">Optional</span>
+        </p>
+    </div>
+
+    <article class="card offer-card">
+        <p class="offer-sponsored">Sponsored{% if offer.advertiser %} — {{ offer.advertiser }}{% endif %}</p>
+
+        <div class="offer-body">
+            {% if offer.image %}
+                {# Dimensions réelles : une création portrait ne doit pas
+                   repousser les deux boutons hors de l'écran au chargement. #}
+                {% include 'front/partials/prize-image.html.twig' with {
+                    'src': '/img/offers/' ~ offer.image,
+                    'alt': offer.headline ?: offer.name,
+                    'width': offer.image_width|default(0),
+                    'height': offer.image_height|default(0),
+                    'ratio_w': 320, 'ratio_h': 200,
+                    'class': 'offer-image',
+                    'priority': true
+                } only %}
+            {% endif %}
+
+            {% if offer.headline %}
+                <h1 class="offer-headline">{{ offer.headline }}</h1>
+            {% endif %}
+
+            {% if offer.text_html %}
+                {# Contenu editorial du back-office, jamais une saisie de participant. #}
+                <div class="offer-text">{{ offer.text_html|raw }}</div>
+            {% endif %}
+        </div>
+
+        <div class="offer-actions">
+            {#
+                UN SEUL lien de sortie par offre. C'est une regle de comptage,
+                pas de mise en page : deux elements cliquables portant la meme
+                offre produiraient deux clics pour une seule intention.
+                Voir .claude/rules/offers-display.md.
+            #}
+            <a class="btn btn-accent btn-lg offer-accept"
+               href="{{ offer.out_url }}"
+               {% if offer.target_blank %}target="_blank" rel="noopener sponsored"{% else %}rel="sponsored"{% endif %}
+               data-offer="{{ offer.id }}">
+                {{ offer.cta_label }}
+            </a>
+
+            {#
+                Refuser est aussi accessible qu'accepter : les deux boutons
+                partagent une meme rangee, meme largeur et meme hauteur.
+
+                Empiles, le refus passait sous la ligne de flottaison des qu'une
+                offre portait un visuel et quelques lignes de texte (verifie au
+                rendu, 390x664). Sur une rangee, la co-visibilite ne depend plus
+                de la longueur de la creation : si l'un est visible, l'autre
+                l'est aussi. La hierarchie tient alors a la couleur seule.
+
+                Le libelle sert aussi de suite de parcours a qui vient de cliquer
+                l'offre : l'offre s'ouvrant dans un onglet separe, cette page
+                reste affichee, et c'est le seul chemin qui reste vers l'ecran
+                de remerciement.
+            #}
+            <a class="btn btn-decline btn-lg offer-decline" href="{{ next_url }}">
+                {% if is_last %}No thanks — finish{% else %}No thanks — next offer{% endif %} &rarr;
+            </a>
+        </div>
+    </article>
+
+    <p class="offer-progress-note">
+        {% if offer.target_blank %}
+            This offer opens in a new tab; this page stays open.
+        {% endif %}
+        {% if is_last %}
+            This is the last offer. You&rsquo;ll be done in a moment.
+        {% else %}
+            {{ total - step }} more optional offer{{ total - step > 1 ? 's' : '' }} after this one.
+            <a href="{{ skip_url }}">Skip them all</a>.
+        {% endif %}
+    </p>
+{% endblock %}

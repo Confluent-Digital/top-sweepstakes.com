@@ -10,6 +10,7 @@ use App\Core\Session\PhpSessionStore;
 use App\Core\Session\SessionStore;
 use App\Core\Signer;
 use App\Middleware\SecurityHeadersMiddleware;
+use App\Middleware\TemplateContextMiddleware;
 use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
@@ -20,6 +21,7 @@ use App\Modules\Admin\Models\Repositories\AdminLeadRepository;
 use App\Modules\Admin\Models\Repositories\AdminOfferRepository;
 use App\Modules\Admin\Models\Repositories\AdminSweepstakeRepository;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
+use App\Modules\Admin\Services\ImageUploadService;
 use App\Modules\Leads\Models\Repositories\ConsentRepository;
 use App\Modules\Leads\Models\Repositories\LeadRepository;
 use App\Modules\Leads\Models\Repositories\SuppressionRepository;
@@ -81,6 +83,7 @@ $container->set(
 );
 $container->set(AdminOfferRepository::class, fn(Container $c) => new AdminOfferRepository($c->get(Database::class)));
 $container->set(AdminLeadRepository::class, fn(Container $c) => new AdminLeadRepository($c->get(Database::class)));
+$container->set(ImageUploadService::class, fn() => new ImageUploadService($rootDir . '/public'));
 $container->set(
     PlatformReportRepository::class,
     fn(Container $c) => new PlatformReportRepository($c->get(Database::class))
@@ -156,6 +159,7 @@ $container->set(SweepstakeAdminController::class, fn(Container $c) => new Sweeps
     $c->get(SweepstakeRepository::class),
     $c->get(AdminOfferRepository::class),
     $c->get(AdminUserRepository::class),
+    $c->get(ImageUploadService::class),
 ));
 $container->set(OfferAdminController::class, fn(Container $c) => new OfferAdminController(
     $c->get(Twig::class),
@@ -163,6 +167,7 @@ $container->set(OfferAdminController::class, fn(Container $c) => new OfferAdminC
     $c->get(OfferRepository::class),
     $c->get(OfferLinkBuilder::class),
     $c->get(AdminUserRepository::class),
+    $c->get(ImageUploadService::class),
 ));
 $container->set(StatsController::class, fn(Container $c) => new StatsController(
     $c->get(Twig::class),
@@ -199,6 +204,28 @@ $container->set(Twig::class, function (Container $c) use ($rootDir, $config) {
     $env->addGlobal('app_name', $config->get('APP_NAME', 'Top Sweepstakes'));
     $env->addGlobal('app_url', rtrim((string) $config->get('APP_URL', ''), '/'));
     $env->addFunction(new TwigFunction('csrf_token', static fn(): string => Csrf::token()));
+
+    // Existence d'un fichier servi depuis `public/`. Sert a n'annoncer une
+    // variante WebP que si elle a reellement ete ecrite : un <source> qui
+    // pointe dans le vide fait afficher un cadre casse chez les navigateurs
+    // qui l'ont retenu, et les visuels deposes avant la migration n'en ont pas.
+    // Le chemin est contraint a `public/` et le resultat memorise : la page
+    // d'accueil liste tous les concours ouverts, un stat() par vignette et par
+    // requete se paierait sur le seul ecran du site qui a vocation a etre
+    // indexe.
+    $publicDir = $rootDir . '/public';
+    $seen = [];
+    $env->addFunction(new TwigFunction(
+        'public_file_exists',
+        static function (string $path) use ($publicDir, &$seen): bool {
+            $clean = '/' . ltrim($path, '/');
+            if (str_contains($clean, '..')) {
+                return false;
+            }
+            return $seen[$clean] ??= is_file($publicDir . $clean);
+        }
+    ));
+
     return $twig;
 });
 
@@ -208,6 +235,7 @@ $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
+$app->add(new TemplateContextMiddleware($container->get(Twig::class)));
 $app->add(new SecurityHeadersMiddleware());
 $app->addErrorMiddleware($config->bool('APP_DEBUG'), true, true, $container->get(Logger::class));
 

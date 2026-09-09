@@ -25,7 +25,8 @@
 
     {% if key == 'state' %}
         <select id="field-{{ key }}" name="{{ key }}" autocomplete="address-level1"
-                {% if field.sweepstake_field_required %}required{% endif %}>
+                {% if field.sweepstake_field_required %}required{% endif %}
+                {% if error %}aria-invalid="true" aria-describedby="error-{{ key }}"{% endif %}>
             <option value="">Select your state</option>
             {% for code, name in states %}
                 <option value="{{ code }}" {% if value == code %}selected{% endif %}>{{ name }}</option>
@@ -34,7 +35,8 @@
 
     {% elseif key == 'gender' %}
         <select id="field-{{ key }}" name="{{ key }}"
-                {% if field.sweepstake_field_required %}required{% endif %}>
+                {% if field.sweepstake_field_required %}required{% endif %}
+                {% if error %}aria-invalid="true" aria-describedby="error-{{ key }}"{% endif %}>
             <option value="">Select</option>
             {% for option, text in {'female': 'Female', 'male': 'Male', 'other': 'Other'} %}
                 <option value="{{ option }}" {% if value == option %}selected{% endif %}>{{ text }}</option>
@@ -54,15 +56,39 @@
             'city': 'address-level2', 'zip': 'postal-code', 'dob': 'bday'
         } %}
 
+        {#
+            Date de naissance : bornes explicites.
+
+            Un `type="date"` sans borne ouvre le selecteur mobile sur la date du
+            jour ; atteindre une annee de naissance y demande une trentaine de
+            gestes, sur le dernier champ du dernier ecran — c'est la ou l'on perd
+            les participants les plus avances dans le tunnel. `max` place le
+            selecteur sur l'annee limite d'eligibilite, `min` ecarte les dates
+            impossibles. La verification d'age reste faite cote serveur, avec son
+            message explicite : ces bornes ne sont qu'un confort de saisie.
+        #}
+        {% if key == 'dob' %}
+            {% set dob_max = 'now'|date_modify('-' ~ (min_age|default(18)) ~ ' years')|date('Y-m-d') %}
+            {% set dob_min = 'now'|date_modify('-120 years')|date('Y-m-d') %}
+        {% endif %}
+
         <input type="{{ types[key]|default('text') }}"
                id="field-{{ key }}"
                name="{{ key }}"
                value="{{ value }}"
                {% if modes[key] is defined %}inputmode="{{ modes[key] }}"{% endif %}
                {% if completes[key] is defined %}autocomplete="{{ completes[key] }}"{% endif %}
+               {% if key == 'email' %}autocapitalize="off" autocorrect="off" spellcheck="false"{% endif %}
                {% if key == 'zip' %}maxlength="10" pattern="[0-9]{5}(-[0-9]{4})?"{% endif %}
+               {% if key == 'dob' %}max="{{ dob_max }}" min="{{ dob_min }}" aria-describedby="hint-{{ key }}{% if error %} error-{{ key }}{% endif %}"{% endif %}
                {% if field.sweepstake_field_required %}required{% endif %}
-               {% if error %}aria-invalid="true" aria-describedby="error-{{ key }}"{% endif %}>
+               {% if error and key != 'dob' %}aria-invalid="true" aria-describedby="error-{{ key }}"{% elseif error %}aria-invalid="true"{% endif %}>
+
+        {# Repli des navigateurs sans `type="date"` : ils rendent un champ texte
+           sans indication de format. Le validateur accepte MM/DD/YYYY. #}
+        {% if key == 'dob' %}
+            <p class="field-hint" id="hint-{{ key }}">MM/DD/YYYY</p>
+        {% endif %}
     {% endif %}
 
     {# L'erreur est affichee AU champ concerne, et la saisie n'est pas perdue. #}

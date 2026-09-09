@@ -2,69 +2,134 @@
 {% block title %}Participant #{{ lead.lead_id }}{% endblock %}
 
 {% block content %}
-    <h1 class="h4 mb-3">Participant #{{ lead.lead_id }}</h1>
+    <div class="page-head">
+        <div>
+            <a class="page-back" href="/admin/leads"><i class="bi bi-arrow-left"></i> Participants</a>
+            <h1 class="page-title">Participant n° {{ lead.lead_id }}</h1>
+            <div class="page-sub">
+                <span class="badge text-bg-{{ lead.lead_status == 'complete' ? 'success' : (lead.lead_status == 'rejected' ? 'danger' : 'secondary') }}">{{ lead.lead_status }}</span>
+                <code>{{ lead.lead_uniqid }}</code> · inscrit le {{ lead.created_at }}
+                {% if lead.lead_test %}<span class="badge text-bg-info">participation de test</span>{% endif %}
+            </div>
+        </div>
+    </div>
 
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">Identite et contexte</div>
-                <table class="table table-sm mb-0">
-                    <tbody>
+    {#
+        L'anonymisation efface les données personnelles ET les preuves de
+        consentement : garder la preuve après avoir anonymisé la fiche
+        reviendrait à conserver l'IP, l'URL et le user agent qu'on vient
+        d'effacer. Il faut le dire ici, sinon l'absence de preuve se lit comme
+        un défaut de collecte.
+    #}
+    {% if lead.lead_anonymized_at %}
+        <div class="alert alert-secondary">
+            <strong><i class="bi bi-eraser"></i> Fiche anonymisée le {{ lead.lead_anonymized_at }}.</strong>
+            Les données personnelles et les preuves de consentement ont été supprimées ensemble —
+            conserver la preuve aurait conservé l'IP, l'URL et le user agent qu'on venait d'effacer.
+            Cette fiche ne peut plus servir de pièce.
+        </div>
+    {% endif %}
+    {% if lead.lead_unsubscribed_at %}
+        <div class="alert alert-warning">
+            <strong><i class="bi bi-envelope-slash"></i> Désinscrit le {{ lead.lead_unsubscribed_at }}.</strong>
+            Cet e-mail figure en liste de suppression : il ne repart jamais, quelle que soit la source.
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-xl-5">
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-person"></i> Identité déclarée</div>
+                <ul class="record">
                     {% for label, value in {
                         'E-mail': lead.lead_email,
-                        'Prenom': lead.lead_first_name,
+                        'Prénom': lead.lead_first_name,
                         'Nom': lead.lead_last_name,
-                        'Telephone': lead.lead_phone,
-                        'Date de naissance': lead.lead_dob,
+                        'Téléphone': lead.lead_phone,
+                        'Naissance': lead.lead_dob,
                         'Adresse': lead.lead_address,
                         'Ville': lead.lead_city,
-                        'Etat': lead.lead_state,
-                        'Code postal': lead.lead_zip,
-                        'Appareil': lead.lead_device,
-                        'IP': lead.lead_ip,
+                        'État': lead.lead_state,
+                        'Code postal': lead.lead_zip
+                    } %}
+                        <li>
+                            <span class="k">{{ label }}</span>
+                            <span class="v">{{ value ?: '—' }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-signpost-split"></i> Provenance et contexte technique</div>
+                <ul class="record">
+                    {% for label, value in {
                         'subid': lead.lead_subid,
+                        'Source': lead.lead_source,
                         'utm_source': lead.lead_utm_source,
                         'utm_medium': lead.lead_utm_medium,
+                        'utm_campaign': lead.lead_utm_campaign,
                         'Referer': lead.lead_referer,
-                        'Inscrit le': lead.created_at
+                        'Appareil': lead.lead_device,
+                        'IP': lead.lead_ip,
+                        'User agent': lead.lead_user_agent
                     } %}
-                        <tr>
-                            <th class="w-25 small">{{ label }}</th>
-                            <td class="small">{{ value ?: '—' }}</td>
-                        </tr>
+                        <li>
+                            <span class="k">{{ label }}</span>
+                            <span class="v mono">{{ value ?: '—' }}</span>
+                        </li>
                     {% endfor %}
-                    </tbody>
-                </table>
+                </ul>
             </div>
         </div>
 
-        <div class="col-lg-6">
+        <div class="col-xl-7">
+            {#
+                La preuve de consentement est la pièce qu'on produirait en cas de
+                contestation. Le texte archivé est présenté tel quel, en pleine
+                taille et pleine opacité : c'est lui qui fait foi, pas notre
+                résumé. Rien ici n'est replié ni tronqué.
+            #}
             <div class="card">
                 <div class="card-header">
-                    Preuve de consentement
-                    <span class="text-muted small">— c'est ce document qu'on produirait en cas de contestation</span>
+                    <i class="bi bi-file-earmark-text"></i> Preuve de consentement
+                    <span class="hint">— le document qu'on produirait en cas de contestation</span>
+                    {% if consents is not empty %}
+                        <span class="badge text-bg-secondary ms-auto">{{ consents|length }} ligne(s) archivée(s)</span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     {% if consents is empty %}
-                        <p class="empty mb-0">Aucun consentement archive pour ce participant.</p>
+                        {% include 'admin/_blank.html.twig' with {
+                            'icon': 'file-earmark-x',
+                            'title': 'Aucun consentement archivé',
+                            'text': "Si ce participant a été anonymisé, c'est normal : les preuves partent avec la personne. Sinon, c'est un défaut de collecte — un consentement qu'on ne peut pas prouver n'existe pas."
+                        } only %}
                     {% else %}
+                        <p class="form-text mt-0 mb-3">
+                            Table en écriture seule : ces lignes ne sont jamais modifiées.
+                            Changer un texte de consentement produit de nouvelles lignes et
+                            laisse celles-ci intactes — c'est ce qui rend la preuve opposable.
+                        </p>
                         {% for c in consents %}
-                            <div class="border-bottom pb-3 mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <strong>{{ c.lead_consent_type }}</strong>
+                            <div class="proof">
+                                <div class="proof-head">
+                                    <span class="proof-type">{{ c.lead_consent_type }}</span>
                                     {% if c.lead_consent_granted %}
-                                        <span class="badge bg-success">accorde</span>
+                                        <span class="badge text-bg-success"><i class="bi bi-check-circle"></i> accordé</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">refuse</span>
+                                        <span class="badge text-bg-secondary"><i class="bi bi-x-circle"></i> refusé</span>
                                     {% endif %}
                                 </div>
                                 {# Le texte reellement affiche au participant, tel qu'archive. #}
-                                <p class="small mt-2 mb-2">{{ c.lead_consent_text }}</p>
-                                <div class="text-muted small">
-                                    {{ c.created_at }} — IP {{ c.lead_consent_ip }}<br>
-                                    {{ c.lead_consent_page_url }}<br>
-                                    empreinte : <code>{{ c.lead_consent_text_hash|slice(0, 16) }}…</code>
-                                </div>
+                                <p class="proof-text">{{ c.lead_consent_text }}</p>
+                                <ul class="proof-meta">
+                                    <li><span class="k">Horodatage</span><span class="v">{{ c.created_at }}</span></li>
+                                    <li><span class="k">Adresse IP</span><span class="v">{{ c.lead_consent_ip ?: '—' }}</span></li>
+                                    <li><span class="k">Page</span><span class="v">{{ c.lead_consent_page_url ?: '—' }}</span></li>
+                                    <li><span class="k">User agent</span><span class="v">{{ c.lead_consent_user_agent ?: '—' }}</span></li>
+                                    <li><span class="k">Empreinte</span><span class="v">{{ c.lead_consent_text_hash }}</span></li>
+                                </ul>
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -73,5 +138,10 @@
         </div>
     </div>
 
-    <a class="btn btn-outline-secondary mt-3" href="/admin/leads">Retour</a>
+    <p class="screen-note mt-3">
+        L'empreinte est celle du texte affiché : elle permet de vérifier qu'aucun mot n'a bougé
+        entre l'écran du participant et cette fiche. Un consentement <strong>refusé</strong> est
+        une preuve au même titre qu'un consentement accordé — c'est lui qui justifie qu'on n'ait
+        pas démarché.
+    </p>
 {% endblock %}

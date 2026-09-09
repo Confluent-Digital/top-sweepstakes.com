@@ -72,11 +72,19 @@ final class OfferEventRepository
     }
 
     /**
-     * Un clic deja enregistre pour ce couple (session, offre) dans la fenetre
-     * donnee. Sert a ne pas compter deux fois un double-clic ou un retour
-     * arriere du navigateur.
+     * Un clic deja enregistre pour ce couple (session, offre).
+     *
+     * **Sans fenetre de temps.** Dans le modele une-offre-par-page, une offre
+     * correspond a une page et donc a une intention : le participant qui
+     * revient sur la page apres avoir ouvert l'offre dans un nouvel onglet, ou
+     * qui reclique dix minutes plus tard, n'a pas eu deux intentions.
+     *
+     * Une fenetre courte ne couvrait que le double-clic ; au-dela, chaque
+     * rappel produisait une ligne supplementaire. Notre compte depassait alors
+     * celui de la regie, et l'ecart n'avait aucune explication au moment du
+     * rapprochement des revenus.
      */
-    public function hasRecentClick(string $sessionUid, int $offerId, int $withinSeconds = 5): bool
+    public function hasClickInSession(string $sessionUid, int $offerId): bool
     {
         if ($sessionUid === '') {
             return false;
@@ -86,14 +94,8 @@ final class OfferEventRepository
               WHERE offer_event_session_uid = :session
                 AND offer_event_id_offer = :offer
                 AND offer_event_action = :action
-                AND created_at >= (NOW() - INTERVAL :seconds SECOND)
               LIMIT 1',
-            [
-                'session' => $sessionUid,
-                'offer' => $offerId,
-                'action' => 'click',
-                'seconds' => $withinSeconds,
-            ]
+            ['session' => $sessionUid, 'offer' => $offerId, 'action' => 'click']
         ) !== false;
     }
 

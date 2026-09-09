@@ -60,12 +60,22 @@ final class OutController
             throw new HttpNotFoundException($request);
         }
 
-        $leadId = $this->leadIdFor($request);
+        $sweepstakeId = (int) ($request->getQueryParams()['s'] ?? 0);
+        $leadId = $sweepstakeId > 0 ? $this->visitor->leadId($sweepstakeId) : null;
         $lead = $leadId !== null ? $this->leads->findById($leadId) : null;
 
-        // Un double-clic ou un retour arriere du navigateur ne doit pas compter
-        // deux fois : la regie ne paie qu'un clic, notre compte doit dire pareil.
-        if (!$this->events->hasRecentClick($sessionUid, $offerId)) {
+        // Rang de l'offre dans le parcours. Avec une offre par page, il dit a
+        // quelle position une offre se fait cliquer — donc ou la placer. Sans
+        // lui, le rang n'existerait que cote impressions et le taux de clic par
+        // position serait incalculable.
+        $position = $this->positionInPath($sweepstakeId, $offerId);
+
+        // Un clic par offre et par session. Le participant qui revient sur la
+        // page apres avoir ouvert l'offre dans un nouvel onglet, ou qui reclique
+        // plus tard, n'a pas eu deux intentions — et la regie ne paie qu'un
+        // clic. La redirection, elle, a toujours lieu : refuser l'acces a
+        // l'offre parce qu'on ne veut pas la recompter n'aurait aucun sens.
+        if (!$this->events->hasClickInSession($sessionUid, $offerId)) {
             $this->events->record([
                 'offer_event_session_uid' => $sessionUid,
                 'offer_event_id_lead' => $leadId,
@@ -74,7 +84,7 @@ final class OutController
                 'offer_event_id_offer' => $offerId,
                 'offer_event_id_block' => null,
                 'offer_event_step' => 3,
-                'offer_event_position' => 0,
+                'offer_event_position' => $position,
                 'offer_event_device' => $this->visitor->device(),
                 'offer_event_action' => 'click',
                 'offer_event_subid' => $this->visitor->subid(),
@@ -103,13 +113,17 @@ final class OutController
         return $response->withHeader('Location', $url)->withStatus(302);
     }
 
-    private function leadIdFor(Request $request): ?int
+    /**
+     * Rang de l'offre dans la sequence figee en session, ou 0 si la sequence
+     * n'est plus connue — session expiree, ou lien rouvert bien plus tard.
+     */
+    private function positionInPath(int $sweepstakeId, int $offerId): int
     {
-        $sweepstakeId = (int) ($request->getQueryParams()['s'] ?? 0);
-        if ($sweepstakeId > 0) {
-            return $this->visitor->leadId($sweepstakeId);
+        if ($sweepstakeId <= 0) {
+            return 0;
         }
-        return null;
+        $index = array_search($offerId, $this->visitor->offerSequence($sweepstakeId), true);
+        return $index === false ? 0 : (int) $index + 1;
     }
 
     /**

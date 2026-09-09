@@ -6,10 +6,12 @@ namespace App\Modules\Admin\Controllers;
 
 use App\Modules\Admin\Models\Repositories\AdminOfferRepository;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
+use App\Modules\Admin\Services\ImageUploadService;
 use App\Modules\Offers\Models\Repositories\OfferRepository;
 use App\Modules\Offers\Services\OfferLinkBuilder;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UploadedFileInterface;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Views\Twig;
 
@@ -30,6 +32,7 @@ final class OfferAdminController
         private OfferRepository $offers,
         private OfferLinkBuilder $links,
         private AdminUserRepository $users,
+        private ImageUploadService $uploads,
     ) {
     }
 
@@ -68,12 +71,25 @@ final class OfferAdminController
                     $id = $this->admin->create($data);
                 }
                 $this->admin->replaceTargetingRules($id, $this->extractRules($input));
+
+                $upload = $this->storeOfferImage($request, $id);
+                if ($upload !== null) {
+                    $errors['offer_image'] = $upload;
+                }
+
                 $this->log($request, 'offer.save', (string) $id);
 
-                return $this->redirect($response, '/admin/offers/' . $id . '/edit?saved=1');
+                if ($errors === []) {
+                    return $this->redirect($response, '/admin/offers/' . $id . '/edit?saved=1');
+                }
+
+                // L'offre est enregistree, seul le visuel a echoue : on recharge
+                // la fiche depuis la base pour ne pas laisser croire le contraire.
+                $offer = $this->offers->findById($id) ?? $data;
+            } else {
+                $offer = $data + $offer;
+                $offer['offer_id'] = $id;
             }
-            $offer = $data + $offer;
-            $offer['offer_id'] = $id;
         }
 
         return $this->view->render($response, 'admin/offers/edit.html.twig', [
@@ -90,6 +106,33 @@ final class OfferAdminController
             // ouvrir le lien : un clic reel est facture a l'annonceur.
             'preview_url' => $id > 0 ? $this->previewUrl($offer) : null,
         ]);
+    }
+
+    /**
+     * Enregistre le visuel de l'offre, s'il y en a un dans la requete.
+     *
+     * Le nom porte l'identifiant de l'offre : deux annonceurs peuvent televerser
+     * un `banner.jpg`, ils ne doivent pas s'ecraser.
+     */
+    private function storeOfferImage(Request $request, int $offerId): ?string
+    {
+        $file = $request->getUploadedFiles()['offer_image_file'] ?? null;
+        if (!$file instanceof UploadedFileInterface || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        $result = $this->uploads->store($file, 'img/offers', 'offer-' . $offerId);
+        if (!($result['ok'] ?? false)) {
+            return (string) ($result['error'] ?? 'Televersement impossible.');
+        }
+
+        $this->admin->update($offerId, [
+            'offer_image' => $result['file'],
+            'offer_image_width' => $result['width'],
+            'offer_image_height' => $result['height'],
+        ]);
+
+        return null;
     }
 
     /** @param array<string,mixed> $offer */
@@ -161,7 +204,6 @@ final class OfferAdminController
             'offer_name' => trim((string) ($input['offer_name'] ?? '')),
             'offer_advertiser' => trim((string) ($input['offer_advertiser'] ?? '')),
             'offer_type' => ($input['offer_type'] ?? '') === 'coupon' ? 'coupon' : 'banner',
-            'offer_image' => trim((string) ($input['offer_image'] ?? '')),
             'offer_headline' => trim((string) ($input['offer_headline'] ?? '')),
             'offer_text_html' => (string) ($input['offer_text_html'] ?? ''),
             'offer_cta_label' => trim((string) ($input['offer_cta_label'] ?? '')),

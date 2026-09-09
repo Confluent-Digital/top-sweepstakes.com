@@ -2,62 +2,159 @@
 {% block title %}Offres{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0">Offres display</h1>
-        <a class="btn btn-primary" href="/admin/offers/new">Nouvelle offre</a>
+    {# Ce qui bloque se compte avant de s'afficher : l'opérateur doit savoir
+       combien de lignes il devra corriger avant de parcourir le tableau. #}
+    {% set n_no_idv = 0 %}{% set n_no_idc = 0 %}{% set t_impr = 0 %}{% set t_clicks = 0 %}
+    {% for o in offers %}
+        {% if not o.offer_platform_idv %}{% set n_no_idv = n_no_idv + 1 %}{% endif %}
+        {% if not o.offer_platform_idc %}{% set n_no_idc = n_no_idc + 1 %}{% endif %}
+        {% set t_impr = t_impr + o.impressions %}
+        {% set t_clicks = t_clicks + o.clicks %}
+    {% endfor %}
+
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Offres display</h1>
+            <div class="page-sub">Identifiants de régie, ciblage, plafonds — l'ordre du parcours est celui de l'eCPM 15 jours</div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-primary btn-sm" href="/admin/offers/new"><i class="bi bi-plus-lg"></i> Nouvelle offre</a>
+        </div>
     </div>
 
-    {% if offers is empty %}
-        <div class="card card-body empty">Aucune offre.</div>
-    {% else %}
-        <div class="card">
-            <table class="table table-sm mb-0 align-middle">
-                <thead>
-                <tr>
-                    <th>Nom</th><th>Annonceur</th><th>Type</th><th>idv</th><th>Statut</th>
-                    <th class="text-end">Impressions</th><th class="text-end">Clics</th>
-                    <th class="text-end">CTR</th><th class="text-end">eCPM 15 j</th><th></th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for o in offers %}
-                    <tr>
-                        <td>{{ o.offer_name }}</td>
-                        <td class="small">{{ o.offer_advertiser ?: '—' }}</td>
-                        <td><span class="badge bg-secondary">{{ o.offer_type }}</span></td>
-                        <td>
-                            {% if o.offer_platform_idv %}
-                                <code>{{ o.offer_platform_idv }}</code>
-                            {% else %}
-                                <span class="badge bg-danger">manquant</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if o.offer_active %}
-                                <span class="badge bg-success">active</span>
-                            {% else %}
-                                <span class="badge bg-secondary">inactive</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end">{{ o.impressions }}</td>
-                        <td class="text-end">{{ o.clicks }}</td>
-                        <td class="text-end">
-                            {# Sans impression, il n'y a pas de taux : le dire plutot
-                               qu'afficher 0 %, qui se lirait comme une contre-performance. #}
-                            {% if o.impressions > 0 %}
-                                {{ (o.clicks / o.impressions * 100)|number_format(2) }} %
-                            {% else %}
-                                <span class="empty">—</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end">{{ o.offer_ecpm_15d }}</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" href="/admin/offers/{{ o.offer_id }}/edit">Editer</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+    {% if n_no_idv > 0 or n_no_idc > 0 %}
+        <div class="alert {{ n_no_idv > 0 ? 'alert-danger' : 'alert-warning' }}">
+            <strong><i class="bi bi-exclamation-octagon"></i> À corriger avant toute mise en ligne :</strong>
+            <span class="flag-stack d-inline-flex ms-1">
+                {% if n_no_idv > 0 %}
+                    <span class="flag flag--bad">{{ n_no_idv }} × IDV MANQUANT
+                        <span class="flag-why">— jamais affichée dans le parcours</span></span>
+                {% endif %}
+                {% if n_no_idc > 0 %}
+                    <span class="flag flag--warn">{{ n_no_idc }} × IDC MANQUANT
+                        <span class="flag-why">— revenu non rattaché à l'offre</span></span>
+                {% endif %}
+            </span>
         </div>
+    {% endif %}
+
+    {% if offers is empty %}
+        <div class="card">
+            {% include 'admin/_blank.html.twig' with {
+                'icon': 'badge-ad',
+                'title': 'Aucune offre',
+                'text': "Le parcours d'offres est la seule source de revenu du site : une participation sans offre ne rapporte rien. Une offre porte ses identifiants de régie, sa liste blanche de données transmises, son ciblage et ses plafonds.",
+                'cta_url': '/admin/offers/new',
+                'cta_label': 'Créer une offre',
+                'cta_icon': 'plus-lg'
+            } only %}
+        </div>
+    {% else %}
+        <div class="scope-note">
+            <span class="scope-count">{{ offers|length }}</span>
+            <span>offres au total — liste complète, ni filtrée ni paginée</span>
+            <span class="scope-page">Impressions et clics : <strong>cumul depuis la création</strong>, pas une période</span>
+        </div>
+
+        <div class="card card-table">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th>Offre</th><th>Annonceur</th><th>Format</th><th>Diffusion</th>
+                        <th>idv / idc</th>
+                        <th class="num">Impressions</th><th class="num">Clics</th><th class="num">CTR</th>
+                        <th class="num">eCPM 15 j</th><th class="num">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for o in offers %}
+                        {#
+                            Ce qui empêche l'offre de fonctionner se voit d'un coup d'œil :
+                            sans idv elle n'est jamais affichée (rail rouge), sans idc son
+                            revenu n'est rattaché à rien et son eCPM reste à zéro (rail ambre).
+                        #}
+                        <tr class="{{ not o.offer_platform_idv ? 'row-bad' : (not o.offer_platform_idc ? 'row-warn' : (not o.offer_active ? 'row-off' : '')) }}">
+                            <td class="cell-key">
+                                <a href="/admin/offers/{{ o.offer_id }}/edit">{{ o.offer_name }}</a>
+                            </td>
+                            <td class="cell-meta">{{ o.offer_advertiser ?: '—' }}</td>
+                            <td><span class="badge text-bg-light">{{ o.offer_type }}</span></td>
+                            <td>
+                                <span class="flag-stack">
+                                    {% if o.offer_active %}
+                                        <span class="badge text-bg-success"><i class="bi bi-broadcast"></i> active</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">inactive</span>
+                                    {% endif %}
+                                    {% if o.offer_cap_day or o.offer_cap_total %}
+                                        <span class="badge text-bg-info" title="Les plafonds sont vérifiés à l'affichage : l'offre disparaît du parcours une fois atteints.">
+                                            <i class="bi bi-speedometer"></i>
+                                            plafonnée{% if o.offer_cap_day %} {{ o.offer_cap_day }}/j{% endif %}</span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="flag-stack">
+                                    {% if o.offer_platform_idv %}
+                                        <code class="small">{{ o.offer_platform_idv }}</code>
+                                    {% else %}
+                                        <span class="flag flag--bad" title="Sans idv, l'URL de sortie est incomplète : l'offre n'est jamais affichée.">
+                                            IDV MANQUANT</span>
+                                    {% endif %}
+                                    {% if o.offer_platform_idc %}
+                                        <code class="small">{{ o.offer_platform_idc }}</code>
+                                    {% else %}
+                                        <span class="flag flag--warn" title="Le flux de reporting rend ses lignes par idc : sans idc, le revenu n'est rattaché à rien.">
+                                            IDC MANQUANT</span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="num">{{ o.impressions|number_format(0, ',', ' ') }}</td>
+                            <td class="num">{{ o.clicks|number_format(0, ',', ' ') }}</td>
+                            <td class="num">
+                                {# Une offre neuve sans impression n'est pas une offre à 0 % de clics. #}
+                                {% if o.impressions > 0 %}
+                                    {{ (o.clicks / o.impressions * 100)|number_format(2) }} %
+                                {% else %}<span class="na">pas d'impression</span>{% endif %}
+                            </td>
+                            <td class="num">
+                                {% if o.impressions > 0 %}
+                                    {{ o.offer_ecpm_15d }}
+                                {% else %}<span class="na">non mesuré</span>{% endif %}
+                            </td>
+                            <td class="row-actions">
+                                <a class="btn btn-outline-secondary btn-xs" href="/admin/offers/{{ o.offer_id }}/edit">
+                                    <i class="bi bi-pencil"></i> Éditer</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="5"><span class="tfoot-scope">Total — {{ offers|length }} offres listées</span></td>
+                        <td class="num">{{ t_impr|number_format(0, ',', ' ') }}</td>
+                        <td class="num">{{ t_clicks|number_format(0, ',', ' ') }}</td>
+                        <td class="num">
+                            {% if t_impr > 0 %}{{ (t_clicks / t_impr * 100)|number_format(2) }} %
+                            {% else %}<span class="na">—</span>{% endif %}
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <p class="screen-note mt-3">
+            L'<strong>eCPM sur 15 jours</strong> pilote l'ordre du parcours d'offres. Une offre sous le seuil
+            d'impressions passe par l'exploration : son eCPM n'est pas encore significatif, et un eCPM à
+            zéro sur une offre neuve ne veut pas dire qu'elle ne rapporte rien.
+        </p>
+        <p class="screen-note">
+            Un <strong>CTR vide</strong> n'est pas un CTR nul : sans impression, il n'y a pas de taux à calculer.
+            Les <strong>plafonds</strong> sont vérifiés à l'affichage — une offre plafonnée disparaît du parcours
+            au lieu de consommer des impressions non payées.
+        </p>
     {% endif %}
 {% endblock %}

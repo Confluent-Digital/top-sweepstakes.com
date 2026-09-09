@@ -45,6 +45,9 @@ segmentés par sujet.
 | `security-auditor` | Audit sécurité en lecture seule, avec scénario d'exploitation. Redirection ouverte sur `/out/`, IDOR, XSS stocké, back-office non protégé. |
 | `debugger` | Réparation chirurgicale : reproduire, isoler à `fichier:ligne`, corriger au minimum, prouver. Connaît les pièges du dépôt. |
 | `landing-cro` | Revue de conversion du tunnel public. Friction, champs superflus, mobile, performance. Pas d'avis esthétique. |
+| `ux-designer` | **Conçoit** l'interface publique et l'applique aux gabarits. Codes visuels des sweepstakes US, hiérarchie exploitable au pouce, thème piloté par la base. Ne touche ni au tracking ni aux textes de consentement. |
+| `seo-reviewer` | Indexation voulue (le tunnel ne doit **pas** être indexé), métadonnées, structure, performance mobile, accessibilité. N'invente jamais un score non mesuré. |
+| `growth-marketer` | Économie du site : dotation, longueur du formulaire, nombre d'offres, ordre d'affichage, qualité des sources. Raisonne en marge sur les chiffres réels du BO, pas sur des benchmarks inventés. |
 
 ## Skills
 

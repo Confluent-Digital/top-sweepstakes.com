@@ -7,11 +7,13 @@ namespace App\Modules\Admin\Controllers;
 use App\Modules\Admin\Models\Repositories\AdminOfferRepository;
 use App\Modules\Admin\Models\Repositories\AdminSweepstakeRepository;
 use App\Modules\Admin\Models\Repositories\AdminUserRepository;
+use App\Modules\Admin\Services\ImageUploadService;
 use App\Modules\Leads\Services\LeadValidator;
 use App\Modules\Leads\Services\UsStates;
 use App\Modules\Sweepstakes\Models\Repositories\SweepstakeRepository;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UploadedFileInterface;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Views\Twig;
 
@@ -29,6 +31,7 @@ final class SweepstakeAdminController
         private SweepstakeRepository $sweepstakes,
         private AdminOfferRepository $offers,
         private AdminUserRepository $users,
+        private ImageUploadService $uploads,
     ) {
     }
 
@@ -67,12 +70,29 @@ final class SweepstakeAdminController
                     $id = $this->admin->create($data);
                 }
                 $this->admin->replaceFields($id, $this->extractFields($input));
-                $this->log($request, $id > 0 ? 'sweepstake.update' : 'sweepstake.create', (string) $id);
 
-                return $this->redirect($response, '/admin/sweepstakes/' . $id . '/edit?saved=1');
+                // Le visuel est traite apres l'enregistrement : le repertoire
+                // de destination porte l'identifiant du concours, qui n'existe
+                // pas encore a la creation.
+                $upload = $this->storePrizeImage($request, $id);
+                if ($upload !== null) {
+                    $errors['prize_image'] = $upload;
+                }
+
+                $this->log($request, 'sweepstake.save', (string) $id);
+
+                if ($errors === []) {
+                    return $this->redirect($response, '/admin/sweepstakes/' . $id . '/edit?saved=1');
+                }
+
+                // Le concours est enregistre, seul le visuel a echoue : on
+                // recharge la fiche telle qu'elle est en base pour ne pas
+                // laisser croire que rien n'a ete sauvegarde.
+                $sweepstake = $this->sweepstakes->findById($id) ?? $data;
+            } else {
+                $sweepstake = $data + $sweepstake;
+                $sweepstake['sweepstake_id'] = $id;
             }
-            $sweepstake = $data + $sweepstake;
-            $sweepstake['sweepstake_id'] = $id;
         }
 
         return $this->view->render($response, 'admin/sweepstakes/edit.html.twig', [
@@ -86,6 +106,37 @@ final class SweepstakeAdminController
             'attached_offers' => $id > 0 ? $this->admin->attachedOffers($id) : [],
             'all_offers' => $this->offers->all(),
         ]);
+    }
+
+    /**
+     * Enregistre le visuel de dotation, s'il y en a un dans la requete.
+     *
+     * Rend le message d'erreur a afficher, ou null si tout va bien — y compris
+     * quand aucun fichier n'a ete depose, ce qui est le cas le plus frequent :
+     * on ne televerse pas le visuel a chaque enregistrement de la fiche.
+     */
+    private function storePrizeImage(Request $request, int $sweepstakeId): ?string
+    {
+        $file = $request->getUploadedFiles()['prize_image'] ?? null;
+        if (!$file instanceof UploadedFileInterface || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        $result = $this->uploads->store($file, 'img/sweepstakes/' . $sweepstakeId, 'prize');
+        if (!($result['ok'] ?? false)) {
+            return (string) ($result['error'] ?? 'Televersement impossible.');
+        }
+
+        // Les dimensions reelles sont enregistrees pour que le gabarit reserve
+        // la bonne place : sans elles, le bouton descend au chargement de
+        // l'image, au moment ou le visiteur vise.
+        $this->admin->update($sweepstakeId, [
+            'sweepstake_prize_image' => $result['file'],
+            'sweepstake_prize_image_width' => $result['width'],
+            'sweepstake_prize_image_height' => $result['height'],
+        ]);
+
+        return null;
     }
 
     /** @param array<string,string> $args */
@@ -141,6 +192,7 @@ final class SweepstakeAdminController
             'sweepstake_date_start' => null,
             'sweepstake_date_end' => null,
             'sweepstake_min_age' => 18,
+            'sweepstake_offer_steps' => 4,
             'sweepstake_excluded_states' => '',
             'sweepstake_official_rules_html' => '',
             'sweepstake_thankyou_html' => '',
@@ -174,13 +226,16 @@ final class SweepstakeAdminController
             ) ? (string) $input['sweepstake_status'] : 'draft',
             'sweepstake_prize_title' => trim((string) ($input['sweepstake_prize_title'] ?? '')),
             'sweepstake_prize_value_usd' => (float) ($input['sweepstake_prize_value_usd'] ?? 0),
-            'sweepstake_prize_image' => trim((string) ($input['sweepstake_prize_image'] ?? '')),
             'sweepstake_sponsor_name' => trim((string) ($input['sweepstake_sponsor_name'] ?? '')),
             'sweepstake_sponsor_address' => trim((string) ($input['sweepstake_sponsor_address'] ?? '')),
             'sweepstake_brand_disclaimer' => trim((string) ($input['sweepstake_brand_disclaimer'] ?? '')),
             'sweepstake_date_start' => $this->nullableDate($input['sweepstake_date_start'] ?? null),
             'sweepstake_date_end' => $this->nullableDate($input['sweepstake_date_end'] ?? null),
             'sweepstake_min_age' => max(13, (int) ($input['sweepstake_min_age'] ?? 18)),
+            // Borne haute volontaire : au-dela, la fatigue fait abandonner bien
+            // avant la derniere offre, et les impressions de fin de parcours ne
+            // se transforment plus.
+            'sweepstake_offer_steps' => max(0, min(12, (int) ($input['sweepstake_offer_steps'] ?? 4))),
             'sweepstake_excluded_states' => implode(
                 ',',
                 UsStates::parseExcluded((string) ($input['sweepstake_excluded_states'] ?? ''))
@@ -234,16 +289,8 @@ final class SweepstakeAdminController
             $errors['sweepstake_name'] = 'Le nom est obligatoire.';
         }
 
-        // Un concours publie sans Official Rules serait une non-conformite
-        // immediate : le blocage est ici, pas dans une consigne.
-        $rules = trim((string) $data['sweepstake_official_rules_html']);
-        if ($data['sweepstake_status'] === 'published' && $rules === '') {
-            $errors['sweepstake_official_rules_html'] =
-                'Les Official Rules sont obligatoires pour publier un concours.';
-        }
-
-        if ($data['sweepstake_status'] === 'published' && $data['sweepstake_sponsor_name'] === '') {
-            $errors['sweepstake_sponsor_name'] = 'Le sponsor doit etre nomme pour publier un concours.';
+        if ($data['sweepstake_status'] === 'published') {
+            $errors += $this->validateForPublication($data);
         }
 
         $start = $data['sweepstake_date_start'];
@@ -269,6 +316,85 @@ final class SweepstakeAdminController
         }
         $decoded = json_decode($raw, true);
         return is_array($decoded) ? array_map('strval', $decoded) : [];
+    }
+
+    /**
+     * Ce qu'un concours doit porter pour etre publie.
+     *
+     * Le blocage vit ici, pas dans une consigne : un concours publie sans
+     * regles opposables ou sans periode de participation est une
+     * non-conformite immediate, et c'est le premier document qu'un attorney
+     * general demande.
+     *
+     * @param array<string,mixed> $data
+     * @return array<string,string>
+     */
+    private function validateForPublication(array $data): array
+    {
+        $errors = [];
+
+        $rules = trim(strip_tags((string) $data['sweepstake_official_rules_html']));
+
+        if ($rules === '') {
+            $errors['sweepstake_official_rules_html'] =
+                'Les Official Rules sont obligatoires pour publier un concours.';
+        } else {
+            // « Non vide » ne suffisait pas : des regles tronquees en plein mot
+            // ont ete publiees sans que rien ne le signale. Un reglement
+            // complet fait plusieurs milliers de caracteres ; ce seuil ecarte
+            // un fragment sans jamais atteindre un texte reel.
+            if (mb_strlen($rules) < 1500) {
+                $errors['sweepstake_official_rules_html'] = sprintf(
+                    'Les Official Rules paraissent incompletes (%d caracteres de texte). '
+                    . 'Un reglement complet porte au minimum : NO PURCHASE NECESSARY, l\'AMOE, '
+                    . 'le sponsor et son adresse, les dates, l\'eligibilite et les Etats exclus, '
+                    . 'l\'ARV, les probabilites de gain, la selection et la publication des gagnants.',
+                    mb_strlen($rules)
+                );
+            } else {
+                // Les mentions dont l'absence est la plus couteuse, et les plus
+                // faciles a perdre dans un copier-coller tronque.
+                $missing = [];
+                foreach (
+                    [
+                    'NO PURCHASE NECESSARY' => 'no purchase necessary',
+                    'la methode alternative d\'entree (AMOE)' => 'alternate method of entry',
+                    'les probabilites de gain' => 'odds of winning',
+                    ] as $label => $needle
+                ) {
+                    if (stripos($rules, $needle) === false) {
+                        $missing[] = $label;
+                    }
+                }
+                if ($missing !== []) {
+                    $errors['sweepstake_official_rules_html'] =
+                        'Mention(s) obligatoire(s) introuvable(s) dans les Official Rules : '
+                        . implode(', ', $missing) . '.';
+                }
+            }
+        }
+
+        if ($data['sweepstake_sponsor_name'] === '') {
+            $errors['sweepstake_sponsor_name'] = 'Le sponsor doit etre nomme pour publier un concours.';
+        }
+        if ($data['sweepstake_sponsor_address'] === '') {
+            $errors['sweepstake_sponsor_address'] =
+                'L\'adresse postale du sponsor est obligatoire pour publier (CAN-SPAM, et AMOE : '
+                . 'c\'est l\'adresse ou l\'on postera une participation par courrier).';
+        }
+
+        // Sans dates, la periode de participation ne se delimite pas — donc
+        // l'eligibilite d'un tirage ne se justifie pas. Et un concours sans
+        // date de fin ne se ferme jamais : il continue de collecter.
+        if ($data['sweepstake_date_start'] === null) {
+            $errors['sweepstake_date_start'] = 'La date d\'ouverture est obligatoire pour publier.';
+        }
+        if ($data['sweepstake_date_end'] === null) {
+            $errors['sweepstake_date_end'] =
+                'La date de cloture est obligatoire pour publier : sans elle, le concours collecte indefiniment.';
+        }
+
+        return $errors;
     }
 
     private function slugify(string $value): string

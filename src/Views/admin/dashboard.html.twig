@@ -2,73 +2,203 @@
 {% block title %}Tableau de bord{% endblock %}
 
 {% block content %}
-    <h1 class="h4 mb-4">Tableau de bord</h1>
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Tableau de bord</h1>
+            <div class="page-sub">Aujourd'hui et 30 derniers jours · heures en America/New_York</div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/stats/offers"><i class="bi bi-bar-chart"></i> Stats offres</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/stats/sources"><i class="bi bi-signpost-split"></i> Stats sources</a>
+        </div>
+    </div>
 
-    <div class="row g-3 mb-4">
-        {% set cards = [
-            {label: "Participations aujourd'hui", value: entries_today},
-            {label: 'Participations (30 jours)', value: entries_30d},
-            {label: "Impressions aujourd'hui", value: impressions_today},
-            {label: "Clics aujourd'hui", value: clicks_today}
+    {#
+        Ce qui bloque une mise en ligne passe avant les chiffres : une offre
+        sans idv n'est jamais affichee et n'apparait donc dans aucune des
+        tuiles ci-dessous — l'absence se voit mal, l'alerte se voit.
+    #}
+    {% set blocked = blockers.offers_no_idv + blockers.offers_no_idc + blockers.sweepstakes_no_rules %}
+    {% if blocked > 0 %}
+        <div class="alert {{ blockers.offers_no_idv > 0 or blockers.sweepstakes_no_rules > 0 ? 'alert-danger' : 'alert-warning' }} mb-3">
+            <strong><i class="bi bi-exclamation-octagon"></i> {{ blocked }} point(s) bloquant(s) en production.</strong>
+            <div class="mt-2 flag-stack">
+                {% if blockers.offers_no_idv > 0 %}
+                    <a class="flag flag--bad text-decoration-none" href="/admin/offers">
+                        <i class="bi bi-eye-slash"></i> {{ blockers.offers_no_idv }} × IDV MANQUANT
+                        <span class="flag-why">— offre active jamais affichée</span>
+                    </a>
+                {% endif %}
+                {% if blockers.offers_no_idc > 0 %}
+                    <a class="flag flag--warn text-decoration-none" href="/admin/offers">
+                        <i class="bi bi-cash-stack"></i> {{ blockers.offers_no_idc }} × IDC MANQUANT
+                        <span class="flag-why">— revenu non rattaché</span>
+                    </a>
+                {% endif %}
+                {% if blockers.sweepstakes_no_rules > 0 %}
+                    <a class="flag flag--bad text-decoration-none" href="/admin/sweepstakes">
+                        <i class="bi bi-file-earmark-x"></i> {{ blockers.sweepstakes_no_rules }} × RÈGLES MANQUANTES
+                        <span class="flag-why">— concours publié sans Official Rules</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# Les chiffres du jour d'abord : c'est ce qu'on vient regarder le matin. #}
+    <div class="row g-3 mb-3">
+        {% set tiles = [
+            {label: "Participations aujourd'hui", value: entries_today|number_format(0, ',', ' '), icon: 'person-plus', hint: 'participations complètes, jour en cours'},
+            {label: "Impressions aujourd'hui", value: impressions_today|number_format(0, ',', ' '), icon: 'eye', hint: 'offres affichées dans le parcours'},
+            {label: "Clics aujourd'hui", value: clicks_today|number_format(0, ',', ' '), icon: 'cursor', hint: 'sorties vers la régie'},
+            {label: 'Participations (30 j)', value: entries_30d|number_format(0, ',', ' '), icon: 'calendar3', hint: '30 jours glissants'}
         ] %}
-        {% for card in cards %}
+        {% for t in tiles %}
             <div class="col-6 col-lg-3">
-                <div class="card card-body">
-                    <div class="text-muted small">{{ card.label }}</div>
-                    <div class="fs-3">{{ card.value|number_format(0, ',', ' ') }}</div>
+                <div class="stat">
+                    <div class="stat-label"><i class="bi bi-{{ t.icon }}"></i> {{ t.label }}</div>
+                    <div class="stat-value">{{ t.value }}</div>
+                    <div class="stat-hint">{{ t.hint }}</div>
+                    <i class="bi bi-{{ t.icon }} stat-mark" aria-hidden="true"></i>
                 </div>
             </div>
         {% endfor %}
-    </div>
 
-    <div class="card card-body mb-4">
-        <div class="text-muted small">Taux de clic du jour</div>
-        {# « Vide » ne se lit pas « zero » : sans impression, il n'y a pas de
-           taux, et l'ecran doit le dire plutot qu'afficher 0 %. #}
-        <div class="fs-4">
-            {% if ctr_today is null %}
-                <span class="empty">aucune impression aujourd'hui</span>
-            {% else %}
-                {{ ctr_today }} %
-            {% endif %}
+        <div class="col-6 col-lg-3">
+            <div class="stat">
+                <div class="stat-label"><i class="bi bi-percent"></i> Taux de clic du jour</div>
+                <div class="stat-value">
+                    {# Sans impression il n'y a pas de taux : le dire, plutôt qu'afficher
+                       0 % qui se lit comme une contre-performance. #}
+                    {% if ctr_today is null %}
+                        <span class="na">aucune impression</span>
+                    {% else %}{{ ctr_today }} %{% endif %}
+                </div>
+                <div class="stat-hint">
+                    {% if ctr_today is null %}
+                        Aucune offre n'a encore été affichée aujourd'hui — ce n'est pas 0 %.
+                    {% else %}
+                        {{ clicks_today|number_format(0, ',', ' ') }} clics sur
+                        {{ impressions_today|number_format(0, ',', ' ') }} impressions
+                    {% endif %}
+                </div>
+                <i class="bi bi-percent stat-mark" aria-hidden="true"></i>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat">
+                <div class="stat-label"><i class="bi bi-telephone"></i> Numéros démarchables (30 j)</div>
+                <div class="stat-value">
+                    {% if tcpa_rate is null %}
+                        <span class="na">aucun numéro collecté</span>
+                    {% else %}{{ tcpa_rate }} %{% endif %}
+                </div>
+                {#
+                    Le téléphone est obligatoire, le consentement TCPA ne l'est pas :
+                    un numéro sans ce consentement n'est pas démarchable et ne vaut
+                    que pour le dédoublonnage. Le taux de collecte serait toujours
+                    de 100 % et n'apprendrait rien — c'est celui-ci qui compte.
+                #}
+                <div class="stat-hint">
+                    {% if tcpa_rate is null %}
+                        Le taux de collecte du numéro vaut toujours 100 % : c'est le consentement TCPA qui distingue.
+                    {% else %}
+                        {{ tcpa_granted|number_format(0, ',', ' ') }} sur
+                        {{ tcpa_total|number_format(0, ',', ' ') }} avec consentement TCPA
+                    {% endif %}
+                </div>
+                <i class="bi bi-telephone stat-mark" aria-hidden="true"></i>
+            </div>
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-3">
         <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">Participations par jour (30 derniers jours)</div>
+            <div class="card h-100 card-table">
+                <div class="card-header">
+                    <i class="bi bi-calendar3"></i> Participations par jour
+                    <span class="hint">— 30 derniers jours</span>
+                </div>
                 {% if by_day is empty %}
-                    <div class="card-body empty">Aucune participation sur la periode.</div>
+                    {% include 'admin/_blank.html.twig' with {
+                        'icon': 'calendar3',
+                        'title': 'Aucune participation sur la période',
+                        'text': "Un concours doit être publié et recevoir du trafic pour qu'une ligne apparaisse ici. Vérifiez le statut des concours et leurs sources.",
+                        'cta_url': '/admin/sweepstakes',
+                        'cta_label': 'Ouvrir les concours',
+                        'cta_icon': 'trophy'
+                    } only %}
                 {% else %}
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>Jour</th><th class="text-end">Participations</th></tr></thead>
-                        <tbody>
-                        {% for row in by_day %}
-                            <tr><td>{{ row.jour }}</td><td class="text-end">{{ row.nb }}</td></tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+                    {# La barre double le chiffre, elle ne le remplace pas : elle sert
+                       à repérer le décrochage d'un jour sans lire les 30 lignes. #}
+                    {% set peak = 1 %}
+                    {% for row in by_day %}{% if row.nb > peak %}{% set peak = row.nb %}{% endif %}{% endfor %}
+                    <div class="table-responsive table-scroll">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>Jour</th><th style="width:45%">Volume</th><th class="num">Participations</th></tr></thead>
+                            <tbody>
+                            {% for row in by_day %}
+                                <tr>
+                                    <td class="text-nowrap">{{ row.jour }}</td>
+                                    <td><span class="bar"><i style="width:{{ (row.nb / peak * 100)|round }}%"></i></span></td>
+                                    <td class="num">{{ row.nb|number_format(0, ',', ' ') }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="2"><span class="tfoot-scope">Total 30 jours</span></td>
+                                <td class="num">{{ entries_30d|number_format(0, ',', ' ') }}</td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 {% endif %}
             </div>
         </div>
 
         <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">Sources (30 derniers jours)</div>
+            <div class="card h-100 card-table">
+                <div class="card-header">
+                    <i class="bi bi-signpost-split"></i> Sources
+                    <span class="hint">— 30 derniers jours, 15 premières</span>
+                    <a class="btn btn-outline-secondary btn-xs ms-auto" href="/admin/stats/sources">Revenu par source</a>
+                </div>
                 {% if by_source is empty %}
-                    <div class="card-body empty">Aucune participation sur la periode.</div>
+                    {% include 'admin/_blank.html.twig' with {
+                        'icon': 'signpost-split',
+                        'title': 'Aucune source sur la période',
+                        'text': "Le subid est lu dans l'URL de la landing. Sans subid, une participation est comptée en « (direct) » — et aucune ligne n'apparaît tant qu'il n'y a pas de participation.",
+                        'cta_url': '/admin/sweepstakes',
+                        'cta_label': 'Ouvrir les concours',
+                        'cta_icon': 'trophy'
+                    } only %}
                 {% else %}
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>subid</th><th class="text-end">Participations</th></tr></thead>
-                        <tbody>
-                        {% for row in by_source %}
-                            <tr><td>{{ row.source }}</td><td class="text-end">{{ row.nb }}</td></tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+                    {% set peak_src = 1 %}
+                    {% for row in by_source %}{% if row.nb > peak_src %}{% set peak_src = row.nb %}{% endif %}{% endfor %}
+                    <div class="table-responsive table-scroll">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>subid</th><th style="width:40%">Volume</th><th class="num">Participations</th></tr></thead>
+                            <tbody>
+                            {% for row in by_source %}
+                                <tr>
+                                    <td class="cell-key"><code>{{ row.source }}</code></td>
+                                    <td><span class="bar"><i style="width:{{ (row.nb / peak_src * 100)|round }}%"></i></span></td>
+                                    <td class="num">{{ row.nb|number_format(0, ',', ' ') }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
+
+    <p class="screen-note mt-3">
+        Les tuiles « aujourd'hui » comptent le jour en cours, non clos : elles montent encore.
+        Le total 30 jours porte sur les <strong>participations complètes</strong> — un formulaire
+        abandonné en étape 2 n'y figure pas.
+    </p>
 {% endblock %}

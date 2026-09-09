@@ -100,13 +100,30 @@ final class SweepstakeController
         $this->visitor->bootstrap($request);
 
         $sweepstakeId = (int) $sweepstake['sweepstake_id'];
+
+        // Nombre d'etapes reellement peuplees. Un concours dont tous les champs
+        // tiennent a l'etape 1 ne doit pas afficher un second ecran vide, ne
+        // portant que les consentements : c'est un abandon offert.
+        $totalSteps = $this->countPopulatedSteps($sweepstakeId);
+
+        // Etape demandee au-dela de ce qui existe : on renvoie sur la derniere
+        // reelle plutot que d'afficher un formulaire sans champ.
+        if ($step > $totalSteps) {
+            return $this->redirect($response, '/' . $slug . ($totalSteps === 1 ? '/entry' : '/details'));
+        }
+
         $fields = $this->sweepstakes->findFields($sweepstakeId, $step);
         $errors = [];
         $values = $this->visitor->lead($sweepstakeId);
+        /** @var list<string> $checkedConsents */
+        $checkedConsents = [];
 
         // Les consentements ne sont presentes qu'a la derniere etape, une fois
         // que le participant sait ce qu'il donne.
-        $presented = $step === 2
+        // Les consentements se presentent a la DERNIERE etape, quelle qu'elle
+        // soit : le participant doit savoir ce qu'il donne avant de consentir.
+        $isLastStep = $step >= $totalSteps;
+        $presented = $isLastStep
             ? $this->consents->forSweepstake($sweepstake, $this->collectedFieldKeys($sweepstakeId))
             : [];
 
@@ -115,7 +132,17 @@ final class SweepstakeController
             $result = $this->validator->validate($input, $fields, $sweepstake);
             $errors = $result['errors'];
 
-            if ($step === 2) {
+            if ($isLastStep) {
+                // Ce que le participant a REELLEMENT coche, pour le lui rendre
+                // si un autre champ le renvoie au formulaire. Sans cela il doit
+                // tout recocher, y compris les opt-in facultatifs — et il ne le
+                // fait pas.
+                foreach ($presented as $consent) {
+                    if ($this->isChecked($input, $consent['type'])) {
+                        $checkedConsents[] = $consent['type'];
+                    }
+                }
+
                 foreach ($presented as $consent) {
                     if ($consent['required'] && !$this->isChecked($input, $consent['type'])) {
                         $errors['consent_' . $consent['type']] = 'Please accept to continue.';
@@ -126,7 +153,7 @@ final class SweepstakeController
             if ($errors === []) {
                 $this->visitor->mergeLead($sweepstakeId, $result['values']);
 
-                if ($step === 1) {
+                if (!$isLastStep) {
                     return $this->redirect($response, '/' . $slug . '/details');
                 }
 
@@ -156,11 +183,13 @@ final class SweepstakeController
             'sweepstake' => $sweepstake,
             'theme' => $this->theme($sweepstake),
             'step' => $step,
-            'total_steps' => 2,
+            'total_steps' => $totalSteps,
             'fields' => $fields,
             'values' => $values,
             'errors' => $errors,
             'consents' => $presented,
+            // Vide au premier affichage : aucune case n'est jamais pre-cochee.
+            'checked_consents' => $checkedConsents,
             'states' => UsStates::all(),
             'action' => '/' . $slug . ($step === 1 ? '/entry' : '/details'),
             'honeypot_field' => SpamGuard::HONEYPOT_FIELD,
@@ -244,8 +273,8 @@ final class SweepstakeController
     }
 
     /**
-     * Page d'offres. Le participant est deja enregistre : ce qui suit est
-     * facultatif, et le gabarit doit le dire clairement.
+     * Entree du parcours d'offres : constitue la sequence et renvoie a la
+     * premiere etape.
      *
      * @param array<string,string> $args
      */
@@ -264,23 +293,95 @@ final class SweepstakeController
             return $this->redirect($response, '/' . $slug . '/entry');
         }
 
-        $lead = $this->leads->findById($leadId) ?? [];
-        $blocks = $this->offers->buildBlocks(
-            $sweepstake,
-            $this->currentVariant($sweepstakeId),
-            3,
-            $this->targetingContext($lead),
+        $sequence = $this->visitor->offerSequence($sweepstakeId);
+        if ($sequence === []) {
+            $lead = $this->leads->findById($leadId) ?? [];
+            $sequence = $this->offers->selectSequence(
+                $sweepstake,
+                $this->currentVariant($sweepstakeId),
+                $this->targetingContext($lead)
+            );
+            $this->visitor->setOfferSequence($sweepstakeId, $sequence);
+        }
+
+        if ($sequence === []) {
+            return $this->redirect($response, '/' . $slug . '/thank-you');
+        }
+
+        return $this->redirect($response, '/' . $slug . '/offers/1');
+    }
+
+    /**
+     * Une offre, une page.
+     *
+     * L'impression est enregistree ici, a l'affichage effectif, et une seule
+     * fois par etape : une offre placee en fin de parcours que le visiteur
+     * n'atteint jamais ne doit compter aucune exposition, et un rechargement
+     * ne doit pas en compter deux.
+     *
+     * @param array<string,string> $args
+     */
+    public function offerStep(Request $request, Response $response, array $args): Response
+    {
+        $slug = (string) $args['slug'];
+        $sweepstake = $this->requireSweepstake($request, $slug);
+        $this->visitor->bootstrap($request);
+
+        $sweepstakeId = (int) $sweepstake['sweepstake_id'];
+        $leadId = $this->visitor->leadId($sweepstakeId);
+        if ($leadId === null) {
+            return $this->redirect($response, '/' . $slug . '/entry');
+        }
+
+        $sequence = $this->visitor->offerSequence($sweepstakeId);
+        $step = max(1, (int) $args['step']);
+        $total = count($sequence);
+
+        // Sequence absente (session expiree) ou parcours termine : on sort par
+        // la page de remerciement plutot que sur une erreur.
+        if ($sequence === [] || $step > $total) {
+            return $this->redirect($response, '/' . $slug . '/thank-you');
+        }
+
+        $offer = $this->offers->presentOffer(
+            $sequence[$step - 1],
             $this->visitor->sessionUid(),
-            $leadId,
-            $this->visitor->device(),
-            $this->visitor->subid(),
+            $step,
+            $sweepstakeId
         );
 
-        return $this->view->render($response, 'front/offers.html.twig', [
+        // Offre desactivee depuis la constitution de la sequence : on passe a
+        // la suivante sans rien compter.
+        if ($offer === null) {
+            return $this->redirect($response, '/' . $slug . '/offers/' . ($step + 1));
+        }
+
+        if (!$this->visitor->hasSeenOfferStep($sweepstakeId, $step)) {
+            $this->offers->recordImpression(
+                $offer['id'],
+                $sweepstakeId,
+                $this->currentVariant($sweepstakeId),
+                $leadId,
+                $this->visitor->sessionUid(),
+                $step,
+                $this->visitor->device(),
+                $this->visitor->subid()
+            );
+            $this->visitor->markOfferStepSeen($sweepstakeId, $step);
+        }
+
+        return $this->view->render($response, 'front/offer.html.twig', [
             'sweepstake' => $sweepstake,
             'theme' => $this->theme($sweepstake),
-            'blocks' => $blocks,
-            'thankyou_url' => '/' . $slug . '/thank-you',
+            'offer' => $offer,
+            'step' => $step,
+            'total' => $total,
+            'progress' => (int) round($step / max(1, $total) * 100),
+            'next_url' => $step < $total
+                ? '/' . $slug . '/offers/' . ($step + 1)
+                : '/' . $slug . '/thank-you',
+            'skip_url' => '/' . $slug . '/thank-you',
+            'is_last' => $step >= $total,
         ]);
     }
 
@@ -290,6 +391,7 @@ final class SweepstakeController
         $sweepstake = $this->requireSweepstake($request, (string) $args['slug']);
         $this->visitor->bootstrap($request);
         $this->visitor->forgetLead((int) $sweepstake['sweepstake_id']);
+        $this->visitor->forgetOfferPath((int) $sweepstake['sweepstake_id']);
 
         return $this->view->render($response, 'front/thankyou.html.twig', [
             'sweepstake' => $sweepstake,
@@ -330,6 +432,21 @@ final class SweepstakeController
             $sweepstakeId,
             $this->sweepstakes->findActiveVariants($sweepstakeId, $this->visitor->device())
         );
+    }
+
+    /**
+     * Nombre d'etapes du formulaire qui portent au moins un champ actif.
+     *
+     * Rend toujours au moins 1 : un concours sans aucun champ n'existe pas en
+     * pratique, mais un tunnel a zero etape n'aurait aucun sens.
+     */
+    private function countPopulatedSteps(int $sweepstakeId): int
+    {
+        $steps = [];
+        foreach ($this->sweepstakes->findFields($sweepstakeId) as $field) {
+            $steps[(int) $field['sweepstake_field_step']] = true;
+        }
+        return $steps === [] ? 1 : max(array_keys($steps));
     }
 
     /** @return list<string> */
