@@ -33,6 +33,13 @@ use App\Modules\Offers\Services\OfferDisplayService;
 use App\Modules\Offers\Services\OfferLinkBuilder;
 use App\Modules\Offers\Services\OfferSelector;
 use App\Modules\Offers\Services\TargetingService;
+use App\Modules\Platform\Models\Repositories\PlatformReportRepository;
+use App\Modules\Platform\Services\PlatformReportClient;
+use App\Modules\Platform\Tasks\PlatformReportTask;
+use App\Modules\Stats\Controllers\StatsController;
+use App\Modules\Stats\Models\Repositories\StatsRepository;
+use App\Modules\Stats\Services\SidParser;
+use App\Modules\Stats\Tasks\StatsRollupTask;
 use App\Modules\Sweepstakes\Models\Repositories\SweepstakeRepository;
 use App\Modules\Sweepstakes\Services\DeviceDetector;
 use App\Modules\Sweepstakes\Services\VisitorContext;
@@ -72,6 +79,31 @@ $container->set(
 );
 $container->set(AdminOfferRepository::class, fn(Container $c) => new AdminOfferRepository($c->get(Database::class)));
 $container->set(AdminLeadRepository::class, fn(Container $c) => new AdminLeadRepository($c->get(Database::class)));
+$container->set(
+    PlatformReportRepository::class,
+    fn(Container $c) => new PlatformReportRepository($c->get(Database::class))
+);
+$container->set(StatsRepository::class, fn(Container $c) => new StatsRepository($c->get(Database::class)));
+
+// ---------------------------------------------------------------- Revenus et statistiques
+$container->set(SidParser::class, fn() => new SidParser());
+$container->set(PlatformReportClient::class, fn(Container $c) => new PlatformReportClient(
+    $c->get(Config::class),
+    $c->get(Client::class),
+    $c->get(LoggerInterface::class),
+));
+$container->set(PlatformReportTask::class, fn(Container $c) => new PlatformReportTask(
+    $c->get(PlatformReportClient::class),
+    $c->get(PlatformReportRepository::class),
+    $c->get(LoggerInterface::class),
+));
+$container->set(StatsRollupTask::class, fn(Container $c) => new StatsRollupTask(
+    $c->get(StatsRepository::class),
+    $c->get(PlatformReportRepository::class),
+    $c->get(OfferRepository::class),
+    $c->get(SidParser::class),
+    $c->get(LoggerInterface::class),
+));
 
 // ---------------------------------------------------------------- Services metier
 $container->set(DeviceDetector::class, fn() => new DeviceDetector());
@@ -123,6 +155,10 @@ $container->set(OfferAdminController::class, fn(Container $c) => new OfferAdminC
     $c->get(OfferRepository::class),
     $c->get(OfferLinkBuilder::class),
     $c->get(AdminUserRepository::class),
+));
+$container->set(StatsController::class, fn(Container $c) => new StatsController(
+    $c->get(Twig::class),
+    $c->get(Database::class),
 ));
 $container->set(LeadAdminController::class, fn(Container $c) => new LeadAdminController(
     $c->get(Twig::class),

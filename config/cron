@@ -1,0 +1,28 @@
+# Crontab de reference pour top-sweepstakes.com
+#
+# A installer avec : crontab config/cron
+# Les logs vont dans logs/tasks/ ; la rotation est laissee a logrotate.
+#
+# `run-one` evite qu'un traitement lent ne se recouvre avec le suivant. Sans
+# lui, deux rollups concurrents sur la meme journee ecrivent en meme temps dans
+# t_offer_stats_daily. L'upsert les rend inoffensifs, mais ils se bloquent
+# mutuellement pour rien.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TSW=/data/www/top-sweepstakes.com
+
+# Revenus de la regie — toutes les heures.
+# La tache remonte trois jours par defaut : la regie revise ses chiffres
+# pendant plusieurs jours, et l'ecriture est un upsert.
+7 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php platform:report >> logs/tasks/platform-report.log 2>&1
+
+# Agregation et eCPM — toutes les heures, decale de la tache precedente pour
+# qu'elle lise des revenus fraichement ecrits.
+22 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php stats:rollup >> logs/tasks/stats-rollup.log 2>&1
+
+# Verification email / telephone — a activer au lot 3.
+# */5 * * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php leads:verify >> logs/tasks/leads-verify.log 2>&1
+
+# Purge RGPD — a activer au lot 3.
+# 30 3 * * * cd $TSW && run-one docker exec topsweepstakes_php php bin/cli.php gdpr:purge >> logs/tasks/gdpr-purge.log 2>&1

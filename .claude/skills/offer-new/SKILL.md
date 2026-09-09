@@ -13,7 +13,8 @@ sans qu'on puisse le rapprocher. Voir `.claude/rules/offers-display.md`.
 | Champ | Ce qu'il faut savoir |
 |---|---|
 | `offer_platform_ids` | identifiant du **site** côté régie. Généralement le même pour toutes les offres, il vient de `AFFILIATE_SITE_IDS`. |
-| `offer_platform_idv` | identifiant de la **créa** côté régie. **C'est la clé de rapprochement des revenus** : une erreur ici et le chiffre d'affaires de l'offre est attribué ailleurs. À recopier depuis la régie, jamais à deviner. |
+| `offer_platform_idv` | identifiant de la **créa** côté régie. Il part dans l'URL de sortie et conditionne la diffusion : une offre sans `idv` n'est pas affichée. |
+| `offer_platform_idc` | identifiant de **campagne** côté régie. **C'est la clé de rapprochement des revenus** : le flux de reporting rend ses lignes par `idc`, et une erreur ici attribue le chiffre d'affaires à une autre offre. À recopier depuis la régie, jamais à deviner. |
 | `offer_platform_idc` | identifiant de campagne, utilisé par le flux de reporting. |
 | `offer_type` | `banner` (visuel seul) ou `coupon` (texte + visuel + bouton). |
 | `offer_passthrough_fields` | **liste blanche** des champs transmis dans l'URL de sortie. Par défaut : rien. On n'ajoute un champ que si l'annonceur l'a demandé et que le concours le collecte. |

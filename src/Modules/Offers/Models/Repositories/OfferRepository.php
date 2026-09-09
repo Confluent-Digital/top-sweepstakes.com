@@ -152,6 +152,28 @@ final class OfferRepository
         return $row === false ? null : $row;
     }
 
+    /**
+     * Correspondance identifiant de campagne (regie) => offre.
+     *
+     * C'est la cle de rapprochement des revenus : le flux de reporting rend ses
+     * lignes par `idc`.
+     *
+     * @return array<string,int>
+     */
+    public function idcToOfferId(): array
+    {
+        $rows = $this->connection()->fetchAllAssociative(
+            'SELECT offer_id, offer_platform_idc FROM t_offer WHERE offer_platform_idc != :empty',
+            ['empty' => '']
+        );
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(string) $row['offer_platform_idc']] = (int) $row['offer_id'];
+        }
+        return $map;
+    }
+
     /** @return list<array<string,mixed>> */
     public function findBlocks(int $sweepstakeId): array
     {

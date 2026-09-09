@@ -38,7 +38,11 @@ GET {AFFILIATE_REPORT_URL}?login=…&pass=…&flux=xml&stat=global|cpx&debut=YYY
 **Les identifiants viennent du `.env`** (`AFFILIATE_REPORT_LOGIN`, `AFFILIATE_REPORT_PASSWORD`).
 Ils sont en clair dans le code de `meilleursconcours.com`, à six endroits — ne pas répéter cela.
 
-Le `sid` est la clé de jointure entre notre tracking et le leur :
+Deux clés relient le flux à nos données :
+
+- **`idc`** rapproche une ligne du flux d'une de **nos offres** (`offer_platform_idc`).
+  `idv` désigne la créa et sert à construire le lien de sortie ; il n'apparaît pas dans le flux.
+- Le **`sid`** fournit le concours et la source :
 `{sweepstake_id}_{subid}_{email_md5}_{date}`. Changer ce format casse le rapprochement des
 revenus pour toutes les journées à venir, et rend les journées passées non comparables.
 Le format se modifie donc avec une migration de données, jamais à la volée.
@@ -58,3 +62,25 @@ affichée et ne pourrait jamais accumuler d'historique.
 (media buy) sont capturés à la première page et **conservés en session** pour toute la durée du
 parcours. Un participant arrivé avec un `subid` doit sortir avec le même : c'est ce qui permet
 d'attribuer le revenu à la bonne source.
+
+## Cron
+
+`config/cron` porte la crontab de référence : `platform:report` puis `stats:rollup`, toutes les
+heures, la seconde décalée de quinze minutes pour qu'elle lise des revenus fraîchement écrits.
+
+Les deux tâches remontent **trois jours** par défaut, pas seulement la veille. La régie révise ses
+chiffres pendant plusieurs jours — validations, annulations — et l'écriture étant un upsert,
+rejouer une journée est sans effet de bord. Un traitement qui ne regarderait que la veille perdrait
+définitivement toute révision arrivée après coup.
+
+`run-one` évite le recouvrement de deux exécutions.
+
+## Revenu non attribué
+
+Une ligne du flux dont l'`idc` ne correspond à aucune offre, ou dont le `sid` ne se lit pas, est
+comptée comme **non attribuée** et journalisée dans `logs/app.log` — jamais répartie au prorata.
+Répartir reviendrait à fabriquer des chiffres qui serviraient ensuite à arbitrer l'affichage.
+
+Le message de fin de `stats:rollup` signale le montant concerné. Un montant qui grossit veut dire
+qu'une offre a été créée côté régie sans que son `idc` soit renseigné ici, ou que le format du
+`sid` a changé.

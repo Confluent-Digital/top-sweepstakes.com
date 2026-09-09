@@ -43,8 +43,9 @@ foreach ($argvInput as $arg) {
 /** @var array<string, array{class-string, string}> $registry */
 $registry = [
     'admin:create' => [App\Modules\Admin\Tasks\CreateAdminUserTask::class, 'run'],
-    // Les taches platform:report, stats:rollup, leads:verify et gdpr:purge
-    // arrivent avec le lot suivant. Voir .claude/rules/tracking-stats.md.
+    'platform:report' => [App\Modules\Platform\Tasks\PlatformReportTask::class, 'run'],
+    'stats:rollup' => [App\Modules\Stats\Tasks\StatsRollupTask::class, 'run'],
+    // leads:verify et gdpr:purge arrivent avec le lot suivant.
 ];
 
 if (!isset($registry[$command])) {

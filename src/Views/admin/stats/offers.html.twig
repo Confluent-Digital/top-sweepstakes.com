@@ -1,0 +1,57 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Statistiques — offres{% endblock %}
+
+{% block content %}
+    <h1 class="h4 mb-3">Performance par offre</h1>
+    {% include 'admin/stats/_period.html.twig' %}
+
+    {% if rows is empty %}
+        <div class="card card-body empty">Aucune offre sur la période.</div>
+    {% else %}
+        <div class="card">
+            <table class="table table-sm mb-0 align-middle">
+                <thead>
+                <tr>
+                    <th>Offre</th><th>Annonceur</th><th>Statut</th>
+                    <th class="text-end">Impressions</th><th class="text-end">Clics</th>
+                    <th class="text-end">CTR</th><th class="text-end">Revenu</th>
+                    <th class="text-end">eCPM période</th><th class="text-end">eCPM 15 j</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in rows %}
+                    <tr>
+                        <td><a href="/admin/offers/{{ r.offer_id }}/edit">{{ r.offer_name }}</a></td>
+                        <td class="small">{{ r.offer_advertiser ?: '—' }}</td>
+                        <td>
+                            {% if r.offer_active %}
+                                <span class="badge bg-success">active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ r.impressions|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">{{ r.clicks|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">
+                            {% if r.impressions > 0 %}
+                                {{ (r.clicks / r.impressions * 100)|number_format(2) }} %
+                            {% else %}<span class="empty">—</span>{% endif %}
+                        </td>
+                        <td class="text-end">${{ r.revenue|number_format(2) }}</td>
+                        <td class="text-end">
+                            {% if r.impressions > 0 %}
+                                ${{ (r.revenue / r.impressions * 1000)|number_format(4) }}
+                            {% else %}<span class="empty">—</span>{% endif %}
+                        </td>
+                        <td class="text-end">{{ r.offer_ecpm_15d }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="form-text mt-2">
+            L'eCPM sur 15 jours est celui qui pilote l'ordre d'affichage. Une offre sous le seuil
+            d'impressions passe par l'exploration : son eCPM n'est pas encore significatif.
+        </p>
+    {% endif %}
+{% endblock %}

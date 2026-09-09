@@ -222,12 +222,22 @@ final class OfferAdminController
             $errors['offer_name'] = 'Le nom est obligatoire.';
         }
 
-        // Une offre active sans identifiant de crea consommerait des
-        // impressions sans qu'aucun revenu ne puisse lui etre rattache.
+        // Une offre active sans crea ne peut pas etre diffusee : OfferSelector
+        // l'ecarterait, elle occuperait une place dans le back-office sans
+        // jamais s'afficher.
         if ($data['offer_active'] === 1 && $data['offer_platform_idv'] === '') {
             $errors['offer_platform_idv'] =
                 'L\'identifiant de crea (idv) est obligatoire pour activer une offre : '
-                . 'sans lui, aucun revenu ne peut lui etre rattache.';
+                . 'sans lui, le lien de sortie ne peut pas etre construit et l\'offre n\'est jamais affichee.';
+        }
+
+        // Sans idc, l'offre s'affiche et rapporte, mais le flux de reporting ne
+        // pourra pas lui rattacher ce revenu : son eCPM restera a zero et elle
+        // sera releguee par l'arbitrage, sans qu'on comprenne pourquoi.
+        if ($data['offer_active'] === 1 && $data['offer_platform_idc'] === '') {
+            $errors['offer_platform_idc'] =
+                'L\'identifiant de campagne (idc) est obligatoire pour activer une offre : '
+                . 'c\'est la cle de rapprochement des revenus.';
         }
 
         $start = $data['offer_date_start'];

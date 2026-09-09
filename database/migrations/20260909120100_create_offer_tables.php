@@ -35,9 +35,11 @@ final class CreateOfferTables extends AbstractMigration
             ->addColumn('offer_text_html', 'text', ['null' => true])
             ->addColumn('offer_cta_label', 'string', ['limit' => 100, 'default' => '', 'null' => false])
             ->addColumn('offer_target_blank', 'boolean', ['null' => false, 'default' => 1])
-            // Identifiants de la regie. offer_platform_idv est la cle de
-            // rapprochement des revenus : une erreur ici attribue le chiffre
-            // d'affaires a une autre offre.
+            // Identifiants de la regie.
+            //  - idv : la crea. Part dans l'URL de sortie, conditionne la diffusion.
+            //  - idc : la campagne. CLE DE RAPPROCHEMENT DES REVENUS — le flux de
+            //    reporting rend ses lignes par idc, et une erreur ici attribue le
+            //    chiffre d'affaires a une autre offre.
             ->addColumn('offer_platform_ids', 'string', ['limit' => 50, 'default' => '', 'null' => false])
             ->addColumn('offer_platform_idv', 'string', ['limit' => 50, 'default' => '', 'null' => false])
             ->addColumn('offer_platform_idc', 'string', ['limit' => 50, 'default' => '', 'null' => false])

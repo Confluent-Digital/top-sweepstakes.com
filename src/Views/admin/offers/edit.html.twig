@@ -68,8 +68,8 @@
                                 <div class="invalid-feedback">{{ errors.offer_platform_idv }}</div>
                             {% endif %}
                             <div class="form-text">
-                                <strong>Cle de rapprochement des revenus.</strong> A recopier depuis la regie,
-                                jamais a deviner : une erreur ici attribue le chiffre d'affaires a une autre offre.
+                                Part dans l'URL de sortie et conditionne la diffusion : une offre sans
+                                <code>idv</code> n'est pas affichee.
                             </div>
                         </div>
                         <div class="row">
@@ -81,8 +81,17 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="idc">idc — campagne</label>
-                                <input class="form-control" id="idc" name="offer_platform_idc"
+                                <input class="form-control {{ errors.offer_platform_idc is defined ? 'is-invalid' }}"
+                                       id="idc" name="offer_platform_idc"
                                        value="{{ offer.offer_platform_idc }}">
+                                {% if errors.offer_platform_idc is defined %}
+                                    <div class="invalid-feedback">{{ errors.offer_platform_idc }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <strong>Cle de rapprochement des revenus.</strong> Le flux de reporting rend
+                                    ses lignes par <code>idc</code> : une erreur ici attribue le chiffre
+                                    d'affaires a une autre offre.
+                                </div>
                             </div>
                         </div>
                     </div>

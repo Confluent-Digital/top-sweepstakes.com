@@ -1,0 +1,47 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Statistiques — sources{% endblock %}
+
+{% block content %}
+    <h1 class="h4 mb-3">Performance par source</h1>
+    {% include 'admin/stats/_period.html.twig' %}
+
+    {% if rows is empty %}
+        <div class="card card-body empty">Aucune donnée sur la période.</div>
+    {% else %}
+        <div class="card">
+            <table class="table table-sm mb-0 align-middle">
+                <thead>
+                <tr>
+                    <th>subid</th><th class="text-end">Participations</th>
+                    <th class="text-end">Impressions</th><th class="text-end">Clics</th>
+                    <th class="text-end">Revenu</th><th class="text-end">Revenu / participation</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in rows %}
+                    <tr>
+                        <td>{{ r.subid }}</td>
+                        <td class="text-end">{{ r.entries|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">{{ r.impressions|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">{{ r.clicks|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">${{ r.revenue|number_format(2) }}</td>
+                        <td class="text-end">
+                            {# C'est cette colonne qui dit si une source est rentable :
+                               le revenu brut ne dit rien sans le volume qui l'a produit. #}
+                            {% if r.revenue_per_entry is null %}
+                                <span class="empty">—</span>
+                            {% else %}
+                                ${{ r.revenue_per_entry|number_format(4) }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="form-text mt-2">
+            Le revenu par participation se compare au coût d'acquisition de la source pour savoir
+            si elle est rentable. Une source sans participation sur la période n'a pas de ratio.
+        </p>
+    {% endif %}
+{% endblock %}
