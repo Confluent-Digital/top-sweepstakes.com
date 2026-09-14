@@ -6,9 +6,21 @@ description: Mise en production, checklist, zones à risque
 
 Branche principale : `main`. Une modification passe par une branche, une PR, une revue.
 
-```bash
-./bin/update.sh     # git pull --ff-only + composer --no-dev + phinx migrate -e prod + purge du cache Twig
-```
+## Deux scripts, deux usages
+
+| Script | Pour quoi | Ce qu'il fait |
+|---|---|---|
+| `./bin/setup.sh` | **première installation, en développement** | crée le `.env` s'il manque, monte les conteneurs (`compose up -d --build`), `composer install` **avec** les dépendances de développement, migre |
+| `./bin/update.sh` | **mise à jour d'un environnement existant, production comprise** | `git pull --ff-only`, `composer install --no-dev --optimize-autoloader`, `phinx migrate -e prod`, purge du cache Twig |
+
+`setup.sh` n'est **pas** le script de mise en production : il installe PHPUnit, PHPStan et PHPCS sur
+le serveur, et reconstruit les images. Tester une mise en production, c'est lancer `update.sh` sur un
+environnement déjà monté.
+
+Les deux sourcent `bin/lib.sh`, qui vérifie que le démon Docker répond et détecte Docker Compose —
+plugin `docker compose` ou binaire `docker-compose`. Sans cette détection, un serveur où le plugin
+manque répond `unknown shorthand flag: 'd' in -d`, un message du CLI Docker qui ne nomme ni Compose
+ni sa cause et fait chercher le problème dans le script.
 
 ## Avant de committer
 

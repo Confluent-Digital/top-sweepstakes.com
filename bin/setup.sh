@@ -2,10 +2,16 @@
 # Premiere installation : conteneurs, dependances, schema.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=bin/lib.sh
+source "$(dirname "$0")/lib.sh"
+
+# Ce script installe un environnement de DEVELOPPEMENT : il cree le .env, monte
+# les conteneurs et migre. Une mise a jour de production passe par update.sh.
+require_docker
 
 [ -f .env ] || { cp .env.example .env; echo "!! .env cree depuis .env.example — renseigner APP_SECRET et les mots de passe avant de continuer"; exit 1; }
 
-docker compose up -d --build
+compose up -d --build
 echo "Attente de MariaDB..."
 until docker exec topsweepstakes_mariadb mariadb-admin ping --silent >/dev/null 2>&1; do sleep 2; done
 
