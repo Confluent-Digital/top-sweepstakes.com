@@ -1,3 +1,15 @@
+# `version` est obsolete pour le plugin Compose v2+, qui l'ignore avec un
+# avertissement. Elle reste indispensable au binaire autonome docker-compose v1,
+# encore en service sur la production : SANS elle, v1 lit le fichier comme du
+# format 1, ou les clefs de premier niveau sont des noms de services — il voit
+# donc un service appele « services » et refuse le fichier.
+#
+# « 3 » et non « 3.8 » : v1 prend alors le schema 3.x le plus recent qu'il
+# connaisse, ce qui evite d'exiger une version minimale de compose. Le fichier
+# n'utilise rien au-dela du format 3.x. A retirer le jour ou la production aura
+# le plugin.
+version: "3"
+
 services:
   topsweepstakes_nginx:
     image: docker-registry.confluent-digital.com/nginx:1.28-alpine

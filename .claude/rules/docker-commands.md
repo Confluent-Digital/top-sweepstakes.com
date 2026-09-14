@@ -26,6 +26,26 @@ docker exec topsweepstakes_php php bin/cli.php --help
 docker exec -it topsweepstakes_mariadb mariadb -u root -p bd_top_sweepstakes
 ```
 
+## Deux Docker Compose, un seul fichier
+
+La production utilise encore le binaire autonome **docker-compose v1** ; le
+developpement, le plugin **docker compose v2+**. Deux consequences dans le
+depot :
+
+- `docker-compose.yml` porte une clef `version: "3"`. Le plugin l'ignore avec un
+  avertissement d'obsolescence ; v1 en a besoin, car sans elle il lit le fichier
+  comme du **format 1**, ou les clefs de premier niveau sont des noms de
+  services — il voit un service appele « services » et refuse le fichier. Ne pas
+  la retirer tant que la production n'a pas le plugin.
+- `bin/setup.sh` et `bin/update.sh` sourcent `bin/lib.sh`, qui detecte l'un ou
+  l'autre. Sans cette detection, une machine sans plugin repond
+  `unknown shorthand flag: 'd' in -d` — le CLI Docker lit `-d` comme un drapeau
+  de premier niveau — un message qui ne nomme ni Compose ni sa cause.
+
+docker-compose v1 n'est plus maintenu depuis juillet 2023 et ne recoit plus de
+correctifs de securite. Installer `docker-compose-plugin` sur la production est
+la vraie reponse ; la clef `version` n'est qu'un pansement, a retirer ce jour-la.
+
 ## Image PHP
 
 `.docker/php-fpm/Dockerfile` étend `docker-registry.confluent-digital.com/php:lp-8.4-fpm`.
