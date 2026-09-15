@@ -32,7 +32,11 @@ if [ ! -w . ]; then
         else
             echo "[entrypoint] Les deux doivent coincider. Sur l'HOTE :"
             echo "[entrypoint]   sudo chown -R $ME .   # aligner les fichiers sur le conteneur"
-            echo "[entrypoint]   sudo chown -R 999:999 .docker/data/mariadb   # SAUF les donnees MariaDB"
+            # Le conteneur PHP ne connait pas DOCKER_DB_DIRECTORY : le message
+            # reste donc conditionnel plutot que de nommer un chemin qui peut
+            # ne plus rien contenir.
+            echo "[entrypoint]   (si DOCKER_DB_DIRECTORY pointe SOUS le projet, rendre ensuite ce"
+            echo "[entrypoint]    repertoire a MariaDB : sudo chown -R 999:999 <ce chemin>)"
             if [ "${OWNER%%:*}" != "0" ]; then
                 # L'inverse — aligner le conteneur sur les fichiers — n'est
                 # propose que si le proprietaire n'est pas root : mettre UID=0

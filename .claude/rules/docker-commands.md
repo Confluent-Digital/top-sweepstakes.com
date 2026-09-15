@@ -79,16 +79,23 @@ sudo chown -R 999:999 .docker/data/mariadb                        # voir l'avert
 docker compose up -d --force-recreate                             # le `user:` n'est relu qu'a la creation
 ```
 
-**⚠️ Le `chown -R` global n'est pas sur tel quel.** `DOCKER_DB_DIRECTORY` pointe
-par defaut sur `./.docker/data/mariadb`, soit **dans l'arborescence du projet**,
-et ce repertoire appartient a `999:999` — le `mysql` de l'image MariaDB. Un
-`chown -R` sur le projet le lui retire et MariaDB refuse de demarrer. D'ou le
-second chown, qui le lui rend. Les deux scripts de `bin/` donnent desormais la
-paire de commandes, jamais la premiere seule.
+**⚠️ Le `chown -R` global n'est sur que si les donnees sont ailleurs.**
+`DOCKER_DB_DIRECTORY` vaut par defaut `./.docker/data/mariadb`, soit **dans
+l'arborescence du projet**, et ce repertoire appartient a `999:999` — le `mysql`
+de l'image MariaDB. Un `chown -R` sur le projet le lui retire et MariaDB refuse
+de demarrer. D'ou le second chown, qui le lui rend.
 
-Un repertoire de donnees pose hors de l'arborescence — ou un volume nomme —
-supprimerait le piege. C'est le choix a faire si la production venait a etre
-reinstallee.
+`chown_commands()` (`bin/lib.sh`) lit `DOCKER_DB_DIRECTORY` et ne propose ce
+second geste **que** si le chemin est sous le projet. La **production** pointe
+sur un chemin absolu exterieur — `/data/docker_mysql/<site>`, convention du
+parc — et n'a donc qu'une seule commande a lancer. C'est la bonne disposition :
+elle supprime le piege au lieu de le documenter. Le defaut du `.env.example`
+reste interne au projet pour qu'une installation de developpement fonctionne
+sans creer de repertoire ailleurs.
+
+En deplacant des donnees existantes vers le nouveau chemin, conserver le
+proprietaire (`cp -a` ou `rsync -a`, puis verifier `999:999`). Sur un repertoire
+vide ou inexistant, MariaDB s'en charge a son premier demarrage.
 
 Le `user:` d'un service n'est lu **qu'a la creation du conteneur** : modifier le
 `.env` ne suffit pas, il faut recreer.
