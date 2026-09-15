@@ -80,14 +80,29 @@
                {% if completes[key] is defined %}autocomplete="{{ completes[key] }}"{% endif %}
                {% if key == 'email' %}autocapitalize="off" autocorrect="off" spellcheck="false"{% endif %}
                {% if key == 'zip' %}maxlength="10" pattern="[0-9]{5}(-[0-9]{4})?"{% endif %}
-               {% if key == 'dob' %}max="{{ dob_max }}" min="{{ dob_min }}" aria-describedby="hint-{{ key }}{% if error %} error-{{ key }}{% endif %}"{% endif %}
+               {% if key in ['dob', 'phone'] %}aria-describedby="hint-{{ key }}{% if error %} error-{{ key }}{% endif %}"{% endif %}
+               {% if key == 'dob' %}max="{{ dob_max }}" min="{{ dob_min }}"{% endif %}
                {% if field.sweepstake_field_required %}required{% endif %}
-               {% if error and key != 'dob' %}aria-invalid="true" aria-describedby="error-{{ key }}"{% elseif error %}aria-invalid="true"{% endif %}>
+               {% if error and key not in ['dob', 'phone'] %}aria-invalid="true" aria-describedby="error-{{ key }}"{% elseif error %}aria-invalid="true"{% endif %}>
 
         {# Repli des navigateurs sans `type="date"` : ils rendent un champ texte
            sans indication de format. Le validateur accepte MM/DD/YYYY. #}
         {% if key == 'dob' %}
             <p class="field-hint" id="hint-{{ key }}">MM/DD/YYYY</p>
+        {% endif %}
+
+        {#
+            Le téléphone est obligatoire et n'est PAS un canal marketing : aucune
+            case de consentement téléphonique n'est présentée. Le dire ici, sous
+            le champ, au moment où on le demande — et non dans une notice qu'on
+            atteint en trois clics — est ce qui rend la collecte loyale.
+        #}
+        {% if key == 'phone' %}
+            <p class="field-hint" id="hint-{{ key }}">
+                Used only for Sweepstakes administration, eligibility verification and winner contact.
+                Your phone number will not be used by {{ sponsor_name|default('the Sponsor') }} for
+                marketing calls or text messages.
+            </p>
         {% endif %}
     {% endif %}
 

@@ -751,3 +751,37 @@ p { margin: 0 0 var(--s4); }
     line-height: 1.45;
     color: var(--ink-legal, #4a5262);
 }
+
+/* Mention legale complete, a proximite du CTA. Lisible sans etre criarde : elle
+   doit pouvoir etre lue, pas seulement etre presente. */
+.disclaimer--entry {
+    max-width: 44rem;
+    margin: var(--sp-4, 1rem) auto 0;
+    font-size: .75rem;
+    line-height: 1.55;
+    text-align: left;
+    opacity: .85;
+}
+.disclaimer--entry a { text-decoration: underline; }
+
+/* Notice at Collection : presente au point de collecte, lisible sans etre
+   envahissante. Encadree pour qu'on la distingue des consentements, qui sont
+   des cases a cocher — celle-ci n'en est pas une, elle informe. */
+.collection-notice {
+    margin: var(--sp-4, 1rem) 0;
+    padding: .75rem .9rem;
+    border: 1px solid var(--line, #dfe3e8);
+    border-radius: 8px;
+    background: var(--surface-alt, #f7f8fa);
+    font-size: .8125rem;
+    line-height: 1.55;
+}
+.collection-notice-title {
+    margin: 0 0 .35rem;
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.collection-notice p { margin: 0; }
+.collection-notice a { text-decoration: underline; }

@@ -127,6 +127,13 @@ final class SweepstakeController
             ? $this->consents->forSweepstake($sweepstake, $this->collectedFieldKeys($sweepstakeId))
             : [];
 
+        // Version affichable de chaque texte : memes mots, avec des ancres sur
+        // les documents cites. Le gabarit ne fabrique pas ce balisage lui-meme,
+        // sinon l'affiche et l'archive pourraient diverger.
+        foreach ($presented as $index => $consent) {
+            $presented[$index]['html'] = ConsentCatalog::html($consent);
+        }
+
         if ($request->getMethod() === 'POST') {
             $input = (array) $request->getParsedBody();
             $result = $this->validator->validate($input, $fields, $sweepstake);
@@ -188,6 +195,10 @@ final class SweepstakeController
             'values' => $values,
             'errors' => $errors,
             'consents' => $presented,
+            // Nom de l'editeur, tel qu'il figure sur la fiche du concours : la
+            // note sous le champ telephone et la Notice at Collection doivent
+            // nommer la MEME entite que les Official Rules.
+            'sponsor_name' => (string) ($sweepstake['sweepstake_sponsor_name'] ?? ''),
             // Vide au premier affichage : aucune case n'est jamais pre-cochee.
             'checked_consents' => $checkedConsents,
             'states' => UsStates::all(),

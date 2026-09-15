@@ -52,14 +52,42 @@
 
         {# La note sous le bouton porte l'échéance, pas la durée : la durée est
            déjà dite dans les réassurances, et un doublon coûte une ligne sans
-           rien ajouter. #}
+           rien ajouter.
+
+           L'heure et le fuseau sont explicites, et doivent l'être : une date
+           seule laisse un doute d'un jour sur la clôture, que les Official
+           Rules tranchent à la seconde près. Les deux doivent dire la même
+           chose. #}
         {% if sweepstake.sweepstake_date_end %}
-            <p class="hero-note">Entries close {{ sweepstake.sweepstake_date_end|date('M j, Y') }}</p>
+            <p class="hero-note">
+                Entries close {{ sweepstake.sweepstake_date_end|date('F j, Y') }} at 11:59:59 p.m. ET.
+            </p>
         {% endif %}
+
+        {#
+            Mention légale complète, à proximité immédiate du CTA : c'est là
+            qu'elle doit être lue, avant de cliquer, et non reléguée en pied de
+            page. Le texte est fourni par le conseil et ne se reformule pas ;
+            les valeurs qui en dépendent — dotation, échéance — viennent de la
+            fiche du concours, pour qu'elles ne puissent pas diverger du
+            règlement.
+        #}
+        <p class="disclaimer disclaimer--entry">
+            NO PURCHASE NECESSARY. A PURCHASE OR PAYMENT WILL NOT INCREASE YOUR CHANCES OF WINNING.
+            Open to legal residents of the 50 United States and the District of Columbia who are at
+            least {{ sweepstake.sweepstake_min_age }} years old and have reached the age of majority
+            in their state of residence.
+            {% if sweepstake.sweepstake_date_end %}
+                Sweepstakes ends {{ sweepstake.sweepstake_date_end|date('F j, Y') }} at 11:59:59 p.m. ET.
+            {% endif %}
+            One (1) {{ sweepstake.sweepstake_prize_title|replace({'Win a ': '', 'Win ': ''}) }} will be awarded.
+            Odds of winning depend on the number of eligible entries received.
+            <a href="/{{ sweepstake.sweepstake_slug }}/rules">See Official Rules</a> for complete details.
+        </p>
 
         <ul class="reassurance">
             <li>{% include 'front/partials/icon.html.twig' with {'name': 'clock'} only %} <span>Under 2 minutes</span></li>
-            <li>{% include 'front/partials/icon.html.twig' with {'name': 'lock'} only %} <span>256-bit SSL encryption</span></li>
+            <li>{% include 'front/partials/icon.html.twig' with {'name': 'lock'} only %} <span>Secure encrypted connection</span></li>
             <li>{% include 'front/partials/icon.html.twig' with {'name': 'gift'} only %} <span>No purchase necessary</span></li>
         </ul>
 

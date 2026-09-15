@@ -111,9 +111,16 @@
                                    {% if consent.type in checked_consents|default([]) %}checked{% endif %}>
                             <span class="consent-body">
                                 <span class="consent-flag{{ consent.required ? ' consent-flag--required' : '' }}">
-                                    {{- consent.required ? 'Required' : 'Optional' -}}
+                                    {{- consent.flag|default(consent.required ? 'Required' : 'Optional') -}}
                                 </span>
-                                <span class="consent-text">{{ consent.text }}</span>
+                                {#
+                                    `html` porte les MEMES mots que `text`, qui est
+                                    ce qui sera archivé dans t_lead_consent : seules
+                                    des ancres y sont posées, sur des libellés déjà
+                                    présents dans la phrase. Le texte est échappé
+                                    avant que les ancres ne soient ajoutées.
+                                #}
+                                <span class="consent-text">{{ consent.html|raw }}</span>
                             </span>
                         </label>
                         {% if errors['consent_' ~ consent.type] is defined %}
@@ -139,6 +146,31 @@
                 et la seule qu'on ne puisse pas reconstituer après coup.
             #}
             <input type="hidden" name="partners_viewed" value="0">
+
+            {#
+                Notice at Collection — au point de collecte, avant le bouton, et
+                non derrière un lien. C'est l'endroit où la loi californienne
+                l'attend, et le seul où elle a une chance d'être lue.
+
+                Elle n'est affichée qu'à la dernière étape, avec les
+                consentements : c'est là que la collecte se conclut.
+            #}
+            {% if consents is not empty %}
+                <section class="collection-notice" aria-labelledby="collection-notice-title">
+                    <h2 id="collection-notice-title" class="collection-notice-title">Privacy Notice at Collection</h2>
+                    <p>
+                        {{ sponsor_name|default('The Sponsor') }} collects your identification, contact,
+                        eligibility and technical information to administer the Sweepstakes, verify
+                        eligibility, prevent fraud, conduct the random drawing and contact the potential
+                        winner. Your telephone number is not used for marketing calls or text messages.
+                        Sweepstakes participation does not automatically enroll you in marketing.
+                        Email marketing from {{ sponsor_name|default('the Sponsor') }} requires the separate
+                        optional choice displayed above. See our
+                        <a href="/sweepstakes-privacy">Sweepstakes Privacy Notice – United States</a> and
+                        <a href="/privacy-choices">Your Privacy Choices</a> for more information.
+                    </p>
+                </section>
+            {% endif %}
 
             <button type="submit" class="btn btn-primary btn-lg btn-block">
                 {% if step < total_steps %}Continue{% else %}Complete my entry{% endif %}
