@@ -9,6 +9,8 @@
 #   ./bin/make-vhost.sh --print          # affiche sans rien ecrire
 #   ./bin/make-vhost.sh --dir /etc/nginx/sites-enabled
 #   ./bin/make-vhost.sh --force          # remplace sans demander
+#   ./bin/make-vhost.sh --canonical www  # www canonique plutot que l'apex
+#   ./bin/make-vhost.sh --no-canonical   # sert les deux noms, sans rediriger
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,12 +18,17 @@ DEFAUT=/data/nginx
 DIR=$DEFAUT
 FORCE=0
 PRINT=0
+# Hote canonique : « apex » (top-sweepstakes.com) ou « www ». « aucun » sert les
+# deux sans rediriger — a n'utiliser que si quelque chose d'autre s'en charge.
+CANONIQUE=apex
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --dir)   DIR="$2"; shift 2 ;;
         --force) FORCE=1; shift ;;
         --print) PRINT=1; shift ;;
+        --canonical) CANONIQUE="$2"; shift 2 ;;
+        --no-canonical) CANONIQUE=aucun; shift ;;
         -h|--help) awk 'NR>1 && /^#/ {sub(/^# ?/, ""); print; next} NR>1 {exit}' "$0"; exit 0 ;;
         *) echo "Option inconnue : $1" >&2; exit 1 ;;
     esac
@@ -41,7 +48,60 @@ UPLOAD=${UPLOAD:-12M}
 [ -n "$DOMAIN" ] || { echo "!! APP_DOMAIN est vide dans .env." >&2; exit 1; }
 [ -n "$PORT" ]   || { echo "!! DOCKER_NGINX_PORT est vide dans .env." >&2; exit 1; }
 
+case "$CANONIQUE" in
+    apex) HOTE="$DOMAIN";        REDIRIGE="www.$DOMAIN" ;;
+    www)  HOTE="www.$DOMAIN";    REDIRIGE="$DOMAIN" ;;
+    aucun) HOTE="$DOMAIN www.$DOMAIN"; REDIRIGE="" ;;
+    *) echo "!! --canonical attend « apex », « www » ou « aucun »." >&2; exit 1 ;;
+esac
+
 FILE="$DIR/$DOMAIN.conf"
+
+# Bloc de redirection, construit a part : imbriquer un heredoc dans une
+# substitution de commande, elle-meme dans un heredoc, rend l'echappement des
+# variables nginx (\$scheme, \$request_uri) illisible et fragile.
+REDIRECTION=""
+if [ -n "$REDIRIGE" ]; then
+    REDIRECTION=$(cat <<EOF
+# ${REDIRIGE} -> ${HOTE}, en 301 permanent.
+#
+# Sans elle, les deux noms servent le MEME site : contenu duplique pour les
+# moteurs, et surtout deux sessions distinctes pour un meme visiteur selon le
+# lien sur lequel il a clique.
+#
+# \$request_uri porte le chemin ET la query string. C'est non negociable ici :
+# treize parametres d'acquisition (subid, utm_*, gclid, fbclid, clickid...) sont
+# lus a la premiere page, figes en session, et le subid finit dans le sid envoye
+# a la regie. Une redirection qui les perdrait rendrait le revenu inattribuable.
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name ${REDIRIGE};
+
+    access_log /var/log/nginx/${DOMAIN}_access.log;
+
+    # AVANT la redirection : certbot doit pouvoir valider ce nom aussi, sinon le
+    # certificat ne couvrira pas les deux hotes.
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/html;
+        access_log off;
+    }
+
+    # Dans un location, et non un \`return\` au niveau du serveur : celui-ci
+    # s'executerait AVANT le choix du location et court-circuiterait la
+    # validation ACME ci-dessus.
+    location / {
+        return 301 \$scheme://${HOTE}\$request_uri;
+    }
+}
+
+EOF
+)
+    # \$() supprime les sauts de ligne finaux : les remettre pour separer
+    # les deux blocs serveur.
+    REDIRECTION="$REDIRECTION"$'\n\n'
+fi
 
 # La limite de taille du proxy doit au moins egaler celle de PHP : en dessous,
 # nginx refuse l'envoi par un 413 avant que PHP ne voie le fichier, et le
@@ -53,11 +113,11 @@ VHOST=$(cat <<EOF
 # ecoute sur 127.0.0.1:${PORT} et parle a PHP-FPM. La racine du site vit dans le
 # conteneur, pas ici.
 
-server {
+${REDIRECTION}server {
     listen 80;
     listen [::]:80;
 
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${HOTE};
 
     access_log /var/log/nginx/${DOMAIN}_access.log;
     error_log  /var/log/nginx/${DOMAIN}_error.log warn;
@@ -142,7 +202,11 @@ fi
 
 printf '%s\n' "$VHOST" > "$FILE"
 echo "Ecrit : $FILE"
-echo "  domaine : $DOMAIN (et www.$DOMAIN)"
+if [ -n "$REDIRIGE" ]; then
+    echo "  domaine : $HOTE  (301 depuis $REDIRIGE, chemin et parametres preserves)"
+else
+    echo "  domaine : $HOTE  (aucune redirection)"
+fi
 echo "  relais  : 127.0.0.1:$PORT"
 echo "  envois  : jusqu'a $UPLOAD"
 

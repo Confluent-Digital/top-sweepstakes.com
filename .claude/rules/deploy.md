@@ -93,6 +93,32 @@ Deux choses que ce vhost doit faire et qu'on ne peut pas omettre :
   répond 413 avant que PHP ne voie le fichier, et le téléversement d'un visuel
   de concours échoue sans message exploitable.
 
+### `www` → apex
+
+Par défaut le vhost généré redirige `www.<domaine>` vers le domaine nu, en 301,
+dans un **deuxième bloc serveur**. `--canonical www` inverse, `--no-canonical`
+sert les deux noms sans rediriger.
+
+Deux raisons de le faire ici plutôt que chez le registrar :
+
+- **La query string doit survivre.** `$request_uri` porte le chemin *et* les
+  paramètres. Treize paramètres d'acquisition (`subid`, `utm_*`, `gclid`,
+  `fbclid`, `clickid`…) sont lus à la première page, figés en session par
+  `VisitorContext`, et le `subid` finit dans le `sid` envoyé à la régie. Une
+  redirection qui les perdrait rendrait le revenu inattribuable — et personne ne
+  s'en apercevrait avant le rapprochement de fin de mois.
+- **Deux noms servant le même site, c'est deux sessions** pour un même visiteur
+  selon le lien cliqué, en plus du contenu dupliqué pour les moteurs.
+
+La redirection est dans un `location /`, **pas** dans un `return` au niveau du
+serveur : celui-ci s'exécute avant le choix du `location` et court-circuiterait
+la validation ACME du nom redirigé — le certificat ne couvrirait alors qu'un
+seul hôte.
+
+Le DNS, lui, ne redirige pas : il résout un nom en adresse. Les deux noms
+doivent simplement pointer sur le serveur (un `A` sur l'apex, un `A` ou `CNAME`
+sur `www`).
+
 Le TLS reste à faire ; la marche à suivre est en commentaire en fin de fichier
 généré. **Point de vigilance** : le nginx du conteneur pose
 `fastcgi_param HTTPS off`. Tant qu'il n'est pas rendu conditionnel à
