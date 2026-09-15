@@ -155,11 +155,15 @@
                             <div class="col-md-8">
                                 <label class="form-label" for="offer_steps">Offres après le formulaire</label>
                                 <input type="number" class="form-control" id="offer_steps" name="sweepstake_offer_steps"
-                                       value="{{ sweepstake.sweepstake_offer_steps }}" min="0" max="12">
+                                       value="{{ sweepstake.sweepstake_offer_steps }}" min="0">
                                 <div class="form-text">
-                                    Une offre par page. Plus d'offres augmente le revenu par participation
-                                    jusqu'au point où la fatigue fait abandonner ; ce point se mesure dans
-                                    <a href="/admin/stats/offers">les stats</a>. <code>0</code> désactive le parcours.
+                                    Une offre par page, <strong>sans plafond</strong>. Le nombre réellement
+                                    présenté est borné par les offres éligibles : en demander plus qu'il n'y
+                                    en a en affiche autant qu'il y en a, puis mène au remerciement — aucune
+                                    offre n'est répétée pour remplir. Plus d'offres augmente le revenu par
+                                    participation jusqu'au point où la fatigue fait abandonner ; ce point se
+                                    mesure dans <a href="/admin/stats/offers">les stats</a>.
+                                    <code>0</code> désactive le parcours.
                                 </div>
                             </div>
                         </div>

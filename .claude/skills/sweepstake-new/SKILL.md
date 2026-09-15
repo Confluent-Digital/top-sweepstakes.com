@@ -46,9 +46,14 @@ visuels et les Official Rules.
    régie (`idv` pour être diffusée, `idc` pour que son revenu lui soit rattaché) et pertinente
    pour du trafic US.
 
-   Quatre étapes est un point de départ raisonnable. Plus d'offres augmente le revenu par
-   participation jusqu'au point où la fatigue fait abandonner ; ce point se mesure dans les
-   statistiques, il ne se devine pas.
+   **Aucun plafond** sur le nombre d'étapes. Le nombre réellement présenté est borné par les
+   offres éligibles : en demander plus qu'il n'y en a en affiche autant qu'il y en a, puis mène
+   au remerciement. `OfferSelector` ne répète jamais une offre pour remplir — une impression
+   comptée deux fois sur la même création fausserait son eCPM, donc l'arbitrage.
+
+   Quatre étapes est un point de départ raisonnable, pas une limite. Plus d'offres augmente le
+   revenu par participation jusqu'au point où la fatigue fait abandonner ; ce point se mesure
+   dans les statistiques, il ne se devine pas.
 
 7. **Variantes A/B** (facultatif) — `t_sweepstake_variant`, avec `device` explicite et poids.
 

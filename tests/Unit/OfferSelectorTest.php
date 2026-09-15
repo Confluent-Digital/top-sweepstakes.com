@@ -285,4 +285,38 @@ final class OfferSelectorTest extends TestCase
         self::assertSame([], $this->selector()->select($offers, $this->participant(), 5, $this->today()));
         self::assertSame([], $this->selector()->select([], $this->participant(), 5, $this->today()));
     }
+
+    /**
+     * Une limite superieure au nombre de candidats ne fabrique pas d'offres.
+     *
+     * Le plafond de douze etapes a ete retire du back-office : « pas grave si
+     * les gens ne vont pas jusqu'au bout ». Encore faut-il qu'une limite large
+     * n'amene pas le selecteur a repeter une offre pour remplir — ce serait une
+     * impression comptee deux fois sur la meme creation, donc un eCPM fausse et
+     * un arbitrage fausse avec lui.
+     */
+    public function testUneLimiteLargeNeRepeteAucuneOffre(): void
+    {
+        $candidats = [
+            $this->offer(1, ['offer_ecpm_15d' => 40.0]),
+            $this->offer(2, ['offer_ecpm_15d' => 30.0]),
+            $this->offer(3, ['offer_ecpm_15d' => 20.0]),
+        ];
+
+        foreach ([3, 10, 50, 5000] as $limite) {
+            $choisies = OfferSelector::seeded(new TargetingService(), self::SEED)->select($candidats, [], $limite);
+            $ids = array_map(static fn(array $o): int => (int) $o['offer_id'], $choisies);
+
+            self::assertCount(3, $ids, 'limite ' . $limite);
+            self::assertSame($ids, array_values(array_unique($ids)), 'limite ' . $limite);
+        }
+    }
+
+    /** Zero garde son sens particulier : aucune offre, parcours desactive. */
+    public function testZeroDesactiveLeParcours(): void
+    {
+        $candidats = [$this->offer(1, ['offer_ecpm_15d' => 40.0])];
+
+        self::assertSame([], OfferSelector::seeded(new TargetingService(), self::SEED)->select($candidats, [], 0));
+    }
 }

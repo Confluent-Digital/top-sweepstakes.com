@@ -236,7 +236,14 @@ final class SweepstakeAdminController
             // Borne haute volontaire : au-dela, la fatigue fait abandonner bien
             // avant la derniere offre, et les impressions de fin de parcours ne
             // se transforment plus.
-            'sweepstake_offer_steps' => max(0, min(12, (int) ($input['sweepstake_offer_steps'] ?? 4))),
+            // Pas de plafond : le nombre d'offres reellement presentees est de
+            // toute facon borne par les offres ELIGIBLES — actives, dans leurs
+            // dates, sous leurs plafonds et retenues par le ciblage. Demander
+            // vingt etapes quand huit offres sont eligibles en affiche huit,
+            // puis mene au remerciement ; OfferSelector ne repete jamais une
+            // offre pour remplir. Seul 0 a un sens particulier : il desactive
+            // le parcours.
+            'sweepstake_offer_steps' => max(0, (int) ($input['sweepstake_offer_steps'] ?? 4)),
             'sweepstake_excluded_states' => implode(
                 ',',
                 UsStates::parseExcluded((string) ($input['sweepstake_excluded_states'] ?? ''))
