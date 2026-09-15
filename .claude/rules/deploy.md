@@ -140,11 +140,63 @@ croirait le visiteur en clair alors qu'il est en TLS. Le cookie de session n'en
 dépend pas — son attribut `Secure` vient de `APP_ENV` — mais la première URL
 absolue construite depuis la requête sortirait en `http://`.
 
-Le TLS reste à faire ; la marche à suivre est en commentaire en fin de fichier
-généré. **Point de vigilance** : le nginx du conteneur pose
-`fastcgi_param HTTPS off`. Tant qu'il n'est pas rendu conditionnel à
-`X-Forwarded-Proto`, PHP se croira en clair et les cookies de session n'auront
-pas l'attribut `Secure`.
+### TLS
+
+```bash
+./bin/make-vhost.sh --tls --print          # voir
+./bin/make-vhost.sh --tls --replace-tls    # remplacer un vhost deja modifie par certbot
+```
+
+Le certificat est cherché dans `/data/letsencrypt/keys/live/<domaine>/` puis
+`/etc/letsencrypt/live/<domaine>/`, avec les `options-ssl-nginx.conf` et
+`ssl-dhparams.pem` s'ils existent.
+
+Le fichier produit porte **trois blocs serveur**, et c'est la structure qui
+compte :
+
+1. **port 80, les deux noms** — validation ACME puis 301 vers HTTPS ;
+2. **443 sur le nom non canonique** — 301 vers le canonique ;
+3. **443 sur le canonique** — le site.
+
+Le point à ne pas rater : `/.well-known/acme-challenge/` est présent sur **chaque
+nom et sur le port 80**. Le vhost que certbot écrit tout seul ne le fait pas —
+il pose un `return 404` sur le nom non couvert par son `if ($host = …)`, si bien
+que le renouvellement échoue sur ce nom-là, et le certificat entier avec lui.
+Le défaut est invisible pendant deux mois.
+
+Optimisations incluses, et pourquoi :
+
+- `gzip_proxied any` — sans lui, **rien n'est compressé**, puisque tout passe par
+  le proxy. `gzip_proxied` vaut `off` par défaut, et il est commenté dans le
+  `nginx.conf` de la production. `gzip on` est répété dans le vhost plutôt que
+  supposé : la configuration globale d'une machine n'est pas celle d'une autre.
+- `keepalive 32` sur un amont nommé, avec `proxy_http_version 1.1` et
+  `Connection ""` — sans quoi chaque requête refait une poignée de main TCP vers
+  le conteneur.
+- `ssl_session_cache` + `ssl_session_timeout` — évite une poignée de main
+  complète à chaque connexion. Tickets désactivés : sans rotation de clef, ils
+  affaiblissent la confidentialité persistante.
+- `http2` en paramètre de `listen` — la directive séparée `http2 on;` exige
+  nginx ≥ 1.25.1, la production est en 1.24.
+- HSTS un an, **sans `preload`** : l'inscription sur la liste des navigateurs se
+  défait très difficilement, c'est un engagement à part.
+- Aucun autre en-tête de sécurité : `X-Frame-Options`,
+  `X-Content-Type-Options` et `Referrer-Policy` sont posés par
+  `SecurityHeadersMiddleware`. Les répéter donnerait deux valeurs pour un même
+  en-tête.
+
+Ce qui n'y est **pas**, volontairement :
+
+- **aucun `proxy_cache`** — les pages du tunnel dépendent de la session ; une
+  page d'offres mise en cache fausserait le comptage des impressions et pourrait
+  montrer à un visiteur le parcours d'un autre ;
+- **aucun `expires`** — le nginx du conteneur pose déjà `expires 7d`, et
+  l'allonger serait risqué : les fichiers ne portent pas d'empreinte dans leur
+  nom, une CSS mise en cache un an le resterait après une mise en production.
+
+Le nginx du conteneur lit `X-Forwarded-Proto` pour en déduire
+`fastcgi_param HTTPS` : le vhost doit donc poser cet en-tête, ce que fait celui
+qui est généré.
 
 ## Avant d'ouvrir le site au trafic
 
