@@ -20,7 +20,7 @@ Commandes :
   stats:rollup [--date=YYYY-MM-DD]                     Agrege les evenements display et recalcule les eCPM
   leads:verify [--limit=200]                           Verifie email / telephone des participants recents
   gdpr:purge [--dry-run]                               Anonymise selon la duree de retention
-  admin:create --email= --password= [--name= --role=]  Cree un compte de back-office
+  admin:create --email= [--name= --role=]              Cree un compte de back-office (mot de passe demande)
   drawing:run --pending                                 Concours clos en attente de tirage
   drawing:run --sweepstake=<id>                         Tire le finaliste d'un concours clos
   drawing:run --grand-prize [--year=YYYY]               Tire le gagnant de l'annee

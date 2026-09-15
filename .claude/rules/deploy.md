@@ -31,10 +31,20 @@ En production, la première installation se fait donc **sans seed** :
 
 ```bash
 ./bin/install.sh
-docker exec topsweepstakes_php php bin/cli.php admin:create \
-  --email=… --password='…' --name='…'
+docker exec -it topsweepstakes_php php bin/cli.php admin:create --email=… --name='…'
 # puis les concours se créent depuis /admin/sweepstakes
 ```
+
+Le `-it` n'est pas décoratif : sans lui, pas de terminal dans le conteneur, donc
+pas de saisie masquée. La tâche demande alors le mot de passe deux fois, sans
+écho.
+
+**Ne pas passer `--password` sur la ligne de commande.** L'argument atterrit
+dans l'historique du shell *et* dans `ps`, où n'importe quel utilisateur de la
+machine peut le lire pendant l'exécution. L'option reste acceptée — avec un
+avertissement — pour ne pas casser l'existant. Pour une installation scriptée,
+utiliser la variable `ADMIN_PASSWORD` : elle n'est visible que dans
+`/proc/<pid>/environ` du seul processus.
 
 `setup.sh` n'est **pas** le script de mise en production : il installe PHPUnit, PHPStan et PHPCS sur
 le serveur, et reconstruit les images. Tester une mise en production, c'est lancer `update.sh` sur un

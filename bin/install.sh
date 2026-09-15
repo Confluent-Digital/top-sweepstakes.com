@@ -82,9 +82,9 @@ $c = new App\Core\Config($_ENV);
 $db = new App\Core\Database($c);
 echo (int) $db->connection()->fetchOne("SELECT COUNT(*) FROM t_admin_user");
 ' 2>/dev/null)" = "0" ]; then
-    echo "   aucun compte. En creer un :"
-    echo "     docker exec topsweepstakes_php php bin/cli.php admin:create \\"
-    echo "       --email=vous@confluent-digital.com --password='<au moins 12 caracteres>' --name='Votre nom'"
+    echo "   aucun compte. En creer un (le mot de passe est demande, sans echo) :"
+    echo "     docker exec -it topsweepstakes_php php bin/cli.php admin:create \\"
+    echo "       --email=vous@confluent-digital.com --name='Votre nom'"
 else
     echo "   un compte existe deja"
 fi
