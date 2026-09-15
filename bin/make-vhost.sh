@@ -324,10 +324,31 @@ if [ -f "$FILE" ] && [ "$FORCE" = "0" ]; then
     case "$reponse" in [oO]*) ;; *) echo "Abandon."; exit 1 ;; esac
 fi
 
+# Les sauvegardes vivent HORS du repertoire des vhosts.
+#
+# La production inclut `/data/nginx/*` — sans filtre d'extension. Un fichier
+# `.bak` depose la devient une configuration ACTIVE, et nginx refuse alors de
+# demarrer sur un doublon d'upstream ou de server_name. Une sauvegarde censee
+# proteger cassait donc la configuration qu'elle protegeait.
+SAUVEGARDES="$(pwd)/.backups/nginx"
 if [ -f "$FILE" ]; then
-    SAUVEGARDE="$FILE.$(date +%Y%m%d%H%M%S).bak"
+    mkdir -p "$SAUVEGARDES"
+    SAUVEGARDE="$SAUVEGARDES/$(basename "$FILE").$(date +%Y%m%d%H%M%S).bak"
     cp -a "$FILE" "$SAUVEGARDE"
     echo "Copie de l'ancien fichier : $SAUVEGARDE"
+fi
+
+# Sauvegardes laissees par les versions precedentes du script : elles sont
+# chargees par nginx et le feront echouer. Autant le dire avant qu'il ne le
+# decouvre.
+ANCIENNES=$(find "$DIR" -maxdepth 1 -name "$(basename "$FILE").*.bak" 2>/dev/null | head -5)
+if [ -n "$ANCIENNES" ]; then
+    echo "!! Des sauvegardes trainent dans $DIR :" >&2
+    printf '     %s\n' $ANCIENNES >&2
+    echo "   nginx inclut ce repertoire SANS filtre d'extension : elles sont chargees" >&2
+    echo "   comme des vhosts et provoquent des doublons. Les deplacer ou les retirer :" >&2
+    echo "     mkdir -p $SAUVEGARDES && mv $DIR/$(basename "$FILE").*.bak $SAUVEGARDES/" >&2
+    echo >&2
 fi
 
 printf '%s\n' "$VHOST" > "$FILE"

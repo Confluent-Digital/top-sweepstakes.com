@@ -169,6 +169,20 @@ Le `options-ssl-nginx.conf` de certbot définit déjà `ssl_session_cache`,
 s'ils en sont absents — les réécrire par-dessus fait échouer nginx sur
 `« directive is duplicate »`.
 
+### ⚠️ `include /data/nginx/*;` — sans filtre d'extension
+
+La production charge **tout** fichier déposé dans `/data/nginx/`, quelle que soit
+son extension. Une sauvegarde `.bak` y devient donc une configuration active, et
+nginx refuse de démarrer sur le doublon d'`upstream` ou de `server_name` qui en
+résulte — une sauvegarde censée protéger cassait la configuration qu'elle
+protégeait.
+
+`make-vhost.sh` écrit donc ses copies dans `<projet>/.backups/nginx/`, hors du
+répertoire servi, et signale celles qui traîneraient encore à côté des vhosts.
+
+La même règle vaut pour tout : ne jamais laisser de `.bak`, `.old`, `.orig` ou
+`.conf.disabled` dans `/data/nginx/`.
+
 Si `nginx -t` refuse la configuration produite, le script **restaure le fichier
 précédent** et le dit. Laisser un fichier invalide en place ne ferait pas tomber
 le site — nginx continue sur sa configuration chargée — mais le prochain

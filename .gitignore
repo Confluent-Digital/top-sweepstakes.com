@@ -16,3 +16,4 @@
 /.idea/
 /.claude/settings.local.json
 *.log
+/.backups/
