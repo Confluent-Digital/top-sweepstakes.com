@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 source "$(dirname "$0")/lib.sh"
 
 require_docker
+require_matching_uid
 
 git pull --ff-only
 docker exec topsweepstakes_php composer install --no-interaction --no-dev --optimize-autoloader

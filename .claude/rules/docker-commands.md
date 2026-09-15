@@ -46,6 +46,40 @@ docker-compose v1 n'est plus maintenu depuis juillet 2023 et ne recoit plus de
 correctifs de securite. Installer `docker-compose-plugin` sur la production est
 la vraie reponse ; la clef `version` n'est qu'un pansement, a retirer ce jour-la.
 
+## ⚠️ UID/GID : la panne la plus courante au premier deploiement
+
+Le conteneur PHP tourne sous `user: ${UID}:${GID}`, lus dans le `.env`, et ecrit
+dans le repertoire monte — `logs/`, `cache/`, `vendor/`. Si ces identifiants ne
+correspondent pas au proprietaire reel des fichiers (depot clone en root, UID
+different entre le poste et le serveur), rien n'est ecrivable. Le symptome brut :
+
+```
+mkdir: can't create directory 'cache/twig': Permission denied
+... (repete, car restart: unless-stopped fait boucler le conteneur)
+/data/www/top-sweepstakes.com/vendor does not exist and could not be created
+```
+
+Aucune de ces lignes ne nomme la cause. Trois garde-fous existent desormais :
+
+- `bin/setup.sh` ecrit les UID/GID **reels** dans le `.env` qu'il cree, au lieu
+  des 1000 du modele ;
+- `require_matching_uid` (dans `bin/lib.sh`, appele par setup.sh et update.sh)
+  refuse de demarrer si le `.env` et le proprietaire des fichiers divergent, et
+  donne les deux commandes possibles ;
+- l'entrypoint du conteneur teste l'ecriture avant tout et affiche qui il est,
+  a qui appartient le repertoire, et quoi faire.
+
+Corriger, au choix — **sur l'hote** :
+
+```bash
+sed -i "s/^UID=.*/UID=$(id -u)/; s/^GID=.*/GID=$(id -g)/" .env   # aligner le conteneur sur les fichiers
+sudo chown -R "$(id -u):$(id -g)" .                               # aligner les fichiers sur le conteneur
+docker compose up -d --force-recreate                             # le `user:` n'est relu qu'a la creation
+```
+
+Le `user:` d'un service n'est lu **qu'a la creation du conteneur** : modifier le
+`.env` ne suffit pas, il faut recreer.
+
 ## Image PHP
 
 `.docker/php-fpm/Dockerfile` étend `docker-registry.confluent-digital.com/php:lp-8.4-fpm`.
