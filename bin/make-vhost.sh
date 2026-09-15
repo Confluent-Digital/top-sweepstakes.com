@@ -11,6 +11,7 @@
 #   ./bin/make-vhost.sh --force          # remplace sans demander
 #   ./bin/make-vhost.sh --canonical www  # www canonique plutot que l'apex
 #   ./bin/make-vhost.sh --no-canonical   # sert les deux noms, sans rediriger
+#   ./bin/make-vhost.sh --replace-tls    # accepte d'ecraser une conf TLS existante
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,6 +19,7 @@ DEFAUT=/data/nginx
 DIR=$DEFAUT
 FORCE=0
 PRINT=0
+REMPLACER_TLS=0
 # Hote canonique : « apex » (top-sweepstakes.com) ou « www ». « aucun » sert les
 # deux sans rediriger — a n'utiliser que si quelque chose d'autre s'en charge.
 CANONIQUE=apex
@@ -26,6 +28,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --dir)   DIR="$2"; shift 2 ;;
         --force) FORCE=1; shift ;;
+        --replace-tls) REMPLACER_TLS=1; shift ;;
         --print) PRINT=1; shift ;;
         --canonical) CANONIQUE="$2"; shift 2 ;;
         --no-canonical) CANONIQUE=aucun; shift ;;
@@ -186,6 +189,31 @@ if [ "$PRINT" = "1" ]; then
 fi
 
 [ -d "$DIR" ] || { echo "!! $DIR n'existe pas." >&2; exit 1; }
+
+# Certbot MODIFIE le vhost en place : il y ajoute `listen 443 ssl`, les chemins
+# de certificat et sa propre redirection. Le regenerer effacerait tout cela et
+# couperait HTTPS — le site repondrait en clair, ou pas du tout.
+#
+# La sauvegarde horodatee ne suffit pas comme garde-fou : personne ne verifie une
+# sauvegarde avant de recharger nginx. Un `--force` pris par habitude doit donc
+# rester sans effet ici ; il faut un drapeau qui ne s'utilise pas par reflexe.
+if [ -f "$FILE" ] && [ "$REMPLACER_TLS" = "0" ] \
+   && grep -qiE 'ssl_certificate|managed by Certbot|letsencrypt' "$FILE"; then
+    echo "!! $FILE porte une configuration TLS (certbot)." >&2
+    echo >&2
+    echo "   La regenerer effacerait le certificat, les chemins et la redirection" >&2
+    echo "   HTTPS poses par certbot : le site repondrait en clair, ou pas du tout." >&2
+    echo >&2
+    echo "   Pour voir ce que produirait le script sans rien ecrire :" >&2
+    echo "     ./bin/make-vhost.sh --print" >&2
+    echo >&2
+    echo "   Pour reporter une nouveaute a la main, comparer :" >&2
+    echo "     ./bin/make-vhost.sh --print | diff $FILE - " >&2
+    echo >&2
+    echo "   Si vous voulez vraiment repartir d'un vhost en clair et refaire le TLS :" >&2
+    echo "     ./bin/make-vhost.sh --replace-tls" >&2
+    exit 1
+fi
 
 if [ -f "$FILE" ] && [ "$FORCE" = "0" ]; then
     echo "!! $FILE existe deja."

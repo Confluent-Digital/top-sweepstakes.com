@@ -119,6 +119,27 @@ Le DNS, lui, ne redirige pas : il résout un nom en adresse. Les deux noms
 doivent simplement pointer sur le serveur (un `A` sur l'apex, un `A` ou `CNAME`
 sur `www`).
 
+### Une fois certbot passé
+
+Certbot **modifie le vhost en place** : il y ajoute `listen 443 ssl`, les chemins
+de certificat et sa propre redirection. `make-vhost.sh` refuse donc de
+régénérer un fichier qui porte `ssl_certificate`, `managed by Certbot` ou
+`letsencrypt` — **`--force` ne suffit pas**, il faut `--replace-tls`, qui ne
+s'utilise pas par réflexe. Une sauvegarde horodatée ne serait pas un garde-fou :
+personne ne la vérifie avant de recharger nginx.
+
+Pour reporter une nouveauté du script sur un vhost déjà passé par certbot :
+
+```bash
+./bin/make-vhost.sh --print | diff /data/nginx/<domaine>.conf -
+```
+
+Le nginx du conteneur lit `X-Forwarded-Proto` et en déduit `fastcgi_param HTTPS`
+(voir le `map` en tête de `.docker/nginx/conf.d/dev.conf`). Sans cela, PHP
+croirait le visiteur en clair alors qu'il est en TLS. Le cookie de session n'en
+dépend pas — son attribut `Secure` vient de `APP_ENV` — mais la première URL
+absolue construite depuis la requête sortirait en `http://`.
+
 Le TLS reste à faire ; la marche à suivre est en commentaire en fin de fichier
 généré. **Point de vigilance** : le nginx du conteneur pose
 `fastcgi_param HTTPS off`. Tant qu'il n'est pas rendu conditionnel à
