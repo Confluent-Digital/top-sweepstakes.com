@@ -91,6 +91,23 @@ encore au rouge reste affiché au rouge.
 Un point ouvert que le code pourrait constater n'a rien à faire dans `ReadinessCatalog` :
 il devient un contrôle dans `ReadinessService`.
 
+## Journaux
+
+`logs/app.log` porte desormais la **ligne de requete** devant chaque erreur :
+
+```
+GET /robots.txt — 404 Not Found Type: Slim\Exception\HttpNotFoundException ...
+```
+
+Sans elle, un 404 ne donnait que quinze lignes de pile a travers les middlewares
+de Slim, sans jamais nommer l'URL demandee : impossible de savoir s'il fallait
+corriger quelque chose ou classer sans importance. C'est `App\Core\ErrorHandler`,
+pose par `setDefaultErrorHandler()` dans `src/app.php`.
+
+Les 404 courants d'un site public sont traites en amont, sans atteindre PHP :
+`favicon.ico` et les autres extensions statiques par le bloc `location ~*` du
+nginx du conteneur, `robots.txt` par un fichier reel dans `public/`.
+
 ## Après la mise en production
 
 1. `curl -s https://top-sweepstakes.com/health` → `status: ok` **et** `database: ok`.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\Config;
 use App\Core\Csrf;
 use App\Core\Database;
+use App\Core\ErrorHandler as AppErrorHandler;
 use App\Core\Logger;
 use App\Core\Session\PhpSessionStore;
 use App\Core\Session\SessionStore;
@@ -308,7 +309,16 @@ $app->add(new TemplateContextMiddleware(
     $container->get(SettingRepository::class),
 ));
 $app->add(new SecurityHeadersMiddleware());
-$app->addErrorMiddleware($config->bool('APP_DEBUG'), true, true, $container->get(Logger::class));
+// Le gestionnaire de Slim journalise l'exception, jamais la requete : un 404
+// donne quinze lignes de pile et pas un mot sur l'URL demandee. App\Core\
+// ErrorHandler prefixe la ligne de requete, sans quoi le journal ne permet ni de
+// corriger un 404 ni de le classer sans importance.
+$errorMiddleware = $app->addErrorMiddleware($config->bool('APP_DEBUG'), true, true);
+$errorMiddleware->setDefaultErrorHandler(new AppErrorHandler(
+    $app->getCallableResolver(),
+    $app->getResponseFactory(),
+    $container->get(Logger::class),
+));
 
 require __DIR__ . '/routes.php';
 

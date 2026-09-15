@@ -1,0 +1,34 @@
+# top-sweepstakes.com
+#
+# Le crawl n'est PAS bloque globalement, et c'est deliberé. Les pages du tunnel
+# portent deja <meta name="robots" content="noindex, nofollow"> ; interdire leur
+# exploration empecherait les robots de LIRE cette balise, et une URL interdite
+# d'exploration peut malgre tout etre indexee si un lien externe y mene — sans
+# son noindex. Bloquer serait donc moins efficace que laisser lire.
+#
+# Seuls figurent ici les chemins qu'aucun robot n'a de raison de suivre, et dont
+# le parcours coute quelque chose.
+
+User-agent: *
+
+# Back-office.
+Disallow: /admin
+
+# Redirections de sortie vers la regie : chaque appel enregistre un CLIC et part
+# vers un annonceur. Un robot qui les suivrait fabriquerait du trafic facture.
+Disallow: /out/
+
+# Parcours de participation : sans interet hors session, et chaque page d'offres
+# atteinte compte une impression.
+Disallow: /*/entry
+Disallow: /*/details
+Disallow: /*/offers
+Disallow: /*/thank-you
+
+# Formulaires de conformite : atteignables par un humain, sans objet pour un
+# robot.
+Disallow: /unsubscribe
+Disallow: /do-not-sell
+
+# Sonde applicative.
+Disallow: /health
