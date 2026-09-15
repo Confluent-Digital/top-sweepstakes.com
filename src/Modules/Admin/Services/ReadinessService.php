@@ -426,6 +426,20 @@ final class ReadinessService
             'link' => '/admin/offers',
         ],
         [
+            'key' => 'admin.two_factor',
+            'severity' => ReadinessCatalog::BLOCKER,
+            'area' => 'Sécurité',
+            'title' => 'Compte de back-office sans double authentification',
+            'why' => 'Le back-office donne accès aux participants et à leurs données personnelles — nom, '
+                . 'adresse, téléphone, preuves de consentement. Protégé par un seul facteur, il tombe avec '
+                . 'un mot de passe réutilisé ailleurs et retrouvé dans une fuite. Ce n\'est pas une '
+                . 'hypothèse : c\'est le mode d\'entrée le plus courant.',
+            'action' => 'Chaque compte l\'active depuis « Mon compte ». Un administrateur peut la retirer '
+                . 'en cas de téléphone perdu, ou `admin:2fa-reset` en ligne de commande.',
+            'owner' => 'Exploitation',
+            'link' => '/admin/users',
+        ],
+        [
             'key' => 'config.affiliate_ids',
             'severity' => ReadinessCatalog::BLOCKER,
             'area' => 'Configuration',
@@ -534,6 +548,7 @@ final class ReadinessService
             'sweepstakes.drawing_pending' => fn(): array => $this->checkPendingDrawings(),
             'offers.idv_missing' => fn(): array => $this->checkOfferIdentifier('offer_platform_idv', 'idv'),
             'offers.idc_missing' => fn(): array => $this->checkOfferIdentifier('offer_platform_idc', 'idc'),
+            'admin.two_factor' => fn(): array => $this->checkTwoFactor(),
             'config.affiliate_ids' => fn(): array => $this->checkConfigValue(['AFFILIATE_SITE_IDS']),
             'config.affiliate_report' => fn(): array => $this->checkConfigValue(
                 ['AFFILIATE_REPORT_LOGIN', 'AFFILIATE_REPORT_PASSWORD']
@@ -871,6 +886,16 @@ final class ReadinessService
             return ['open' => false, 'detail' => sprintf('Toutes les offres actives portent leur %s.', $label)];
         }
         return ['open' => true, 'detail' => sprintf('Sans %s : %s.', $label, implode(', ', $offers))];
+    }
+
+    /** @return array{open:bool, detail:string} */
+    private function checkTwoFactor(): array
+    {
+        $sans = $this->readiness->adminsWithoutTwoFactor();
+        if ($sans === []) {
+            return ['open' => false, 'detail' => 'Tous les comptes actifs ont une double authentification.'];
+        }
+        return ['open' => true, 'detail' => 'Sans double authentification : ' . implode(', ', $sans) . '.'];
     }
 
     /**

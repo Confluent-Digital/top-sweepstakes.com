@@ -27,6 +27,11 @@ final class ArraySessionStore implements SessionStore
         return isset($this->data[$key]);
     }
 
+    /** Sans effet : il n'y a pas d'identifiant a renouveler hors d'une vraie session. */
+    public function regenerate(): void
+    {
+    }
+
     public function remove(string $key): void
     {
         unset($this->data[$key]);

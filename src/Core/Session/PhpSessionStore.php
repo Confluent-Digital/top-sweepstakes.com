@@ -21,6 +21,15 @@ final class PhpSessionStore implements SessionStore
         return isset($_SESSION[$key]);
     }
 
+    public function regenerate(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            // true : l'ancien fichier de session est supprime. Le garder
+            // laisserait un identifiant valide en circulation.
+            session_regenerate_id(true);
+        }
+    }
+
     public function remove(string $key): void
     {
         unset($_SESSION[$key]);

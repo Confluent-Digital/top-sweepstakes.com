@@ -1,0 +1,150 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Mon compte{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Mon compte</h1>
+            <div class="page-sub">{{ user.admin_user_email }} · {{ user.admin_user_name }}</div>
+        </div>
+    </div>
+
+    {% if saved %}
+        <div class="alert alert-success py-2"><i class="bi bi-check2"></i>
+            {% if saved == 'enabled' %}Double authentification activée.
+            {% elseif saved == 'disabled' %}Double authentification désactivée.
+            {% elseif saved == 'codes' %}Nouveaux codes de secours générés — les anciens ne valent plus.
+            {% endif %}
+        </div>
+    {% endif %}
+    {% if error %}
+        <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i>
+            {% if error == 'code' %}Code invalide. Vérifiez l'heure de votre téléphone, puis réessayez.
+            {% elseif error == 'expire' %}La configuration a expiré. Rechargez la page pour recommencer.
+            {% elseif error == 'deja' %}La double authentification est déjà active.
+            {% elseif error == 'inactive' %}La double authentification n'est pas active.
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# Les codes ne s'affichent qu'UNE fois. Recharger la page ne les remontre pas :
+       c'est ce qui force à les mettre de côté tout de suite. #}
+    {% if codes %}
+        <div class="card mb-3" style="border-color:var(--ts-warn-line)">
+            <div class="card-header" style="color:var(--ts-warn-fg);background:var(--ts-warn-bg)">
+                <i class="bi bi-key"></i> Codes de secours — affichés une seule fois
+            </div>
+            <div class="p-3">
+                <p style="font-size:var(--ts-fs-sm)">
+                    Mettez-les de côté <strong>maintenant</strong>, hors de l'appareil qui porte
+                    l'application d'authentification. Chacun ne sert qu'une fois. Sans eux, un téléphone
+                    perdu ne se rattrape qu'en ligne de commande sur le serveur.
+                </p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:.4rem">
+                    {% for c in codes %}
+                        <code style="padding:.35rem .5rem;background:var(--ts-code-bg);border-radius:var(--ts-radius-sm);text-align:center">{{ c }}</code>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-shield-lock"></i> Double authentification
+            {% if actif %}
+                <span class="badge bg-success ms-2"><i class="bi bi-check-circle"></i> active</span>
+            {% else %}
+                <span class="badge bg-danger ms-2"><i class="bi bi-x-circle"></i> inactive</span>
+            {% endif %}
+        </div>
+
+        <div class="p-3">
+            {% if actif %}
+                <p style="font-size:var(--ts-fs-sm)">
+                    Activée le {{ user.admin_user_totp_confirmed_at }}.
+                    Il vous reste <strong>{{ restants }}</strong> code{{ restants > 1 ? 's' : '' }} de secours
+                    {% if restants == 0 %}
+                        — <span style="color:var(--ts-bad-fg)">aucun</span>, régénérez-en avant de perdre
+                        l'accès à votre application.
+                    {% endif %}
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <form method="post" action="/admin/account/recovery-codes" class="reserve-form">
+                            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                            <input class="form-control form-control-sm" type="text" name="code"
+                                   inputmode="numeric" autocomplete="one-time-code" maxlength="11"
+                                   placeholder="Code actuel" aria-label="Code actuel" required>
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                Régénérer les codes de secours
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <form method="post" action="/admin/account/2fa/disable" class="reserve-form">
+                            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                            <input class="form-control form-control-sm" type="text" name="code"
+                                   inputmode="numeric" autocomplete="one-time-code" maxlength="11"
+                                   placeholder="Code actuel" aria-label="Code actuel" required>
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Désactiver</button>
+                        </form>
+                    </div>
+                </div>
+                <p class="reserve-hint mt-2">
+                    Un code valide est exigé pour désactiver : sans cela, une session volée suffirait à
+                    retirer la protection, ce qui la réduirait à rien.
+                </p>
+
+            {% else %}
+                <p style="font-size:var(--ts-fs-sm)">
+                    Le back-office donne accès aux participants et à leurs données personnelles — nom,
+                    adresse, téléphone, preuves de consentement. Un mot de passe seul ne suffit pas à
+                    les protéger.
+                </p>
+
+                <div class="row g-4 align-items-start">
+                    <div class="col-md-auto">
+                        <div style="background:#fff;padding:.5rem;border-radius:var(--ts-radius);display:inline-block">
+                            {{ qr|raw }}{# SVG produit par le serveur a partir du secret, aucune donnee saisie #}
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <ol style="font-size:var(--ts-fs-sm);padding-left:1.1rem">
+                            <li class="mb-2">
+                                Scannez ce QR avec votre application d'authentification
+                                (Google Authenticator, Authy, 1Password, Bitwarden…).
+                            </li>
+                            <li class="mb-2">
+                                Ou saisissez la clé à la main :<br>
+                                <code style="font-size:var(--ts-fs-base);letter-spacing:.06em">{{ secret_lisible }}</code>
+                            </li>
+                            <li>Entrez le code affiché pour confirmer.</li>
+                        </ol>
+
+                        <form method="post" action="/admin/account/2fa/enable" class="reserve-form">
+                            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                            <input class="form-control form-control-sm" style="flex:0 0 9rem" type="text"
+                                   name="code" inputmode="numeric" autocomplete="one-time-code"
+                                   maxlength="6" placeholder="6 chiffres" aria-label="Code" required>
+                            <button class="btn btn-sm btn-primary" type="submit">
+                                <i class="bi bi-shield-check"></i> Activer
+                            </button>
+                        </form>
+                        <p class="reserve-hint mt-2">
+                            Rien n'est enregistré tant que ce code n'est pas validé : une configuration
+                            abandonnée en route ne vous enfermera pas dehors.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <p class="screen-note mt-3">
+        Les codes sont à usage unique dans leur fenêtre de trente secondes : un code déjà servi est
+        refusé même s'il s'affiche encore. Les échecs comptent dans le verrouillage du compte, au même
+        titre qu'un mot de passe erroné.
+    </p>
+{% endblock %}

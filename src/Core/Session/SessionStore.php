@@ -17,4 +17,14 @@ interface SessionStore
     public function has(string $key): bool;
 
     public function remove(string $key): void;
+
+    /**
+     * Renouvelle l'identifiant de session en conservant son contenu.
+     *
+     * A appeler a l'ouverture d'une session authentifiee : un identifiant pose
+     * par un tiers AVANT la connexion — par un lien, un sous-domaine, un proxy
+     * — ne doit pas survivre a celle-ci, sans quoi ce tiers se retrouve
+     * connecte en meme temps que l'utilisateur.
+     */
+    public function regenerate(): void;
 }

@@ -19,6 +19,7 @@
             {% if saved == 'created' %}Compte créé.
             {% elseif saved == 'password' %}Mot de passe changé, verrouillage levé.
             {% elseif saved == 'unlocked' %}Verrouillage levé.
+            {% elseif saved == '2fa_reset' %}Double authentification retirée. Le compte n'a plus qu'un seul facteur : demandez-lui de la réactiver.
             {% else %}Compte enregistré.{% endif %}
         </div>
     {% endif %}
@@ -33,6 +34,9 @@
                 rétrograder fermerait l'accès aux comptes et aux réglages pour tout le monde — il faudrait
                 repasser par la ligne de commande sur le serveur.
             {% elseif error == 'self' %}Vous ne pouvez pas désactiver votre propre compte.
+            {% elseif error == 'self_2fa' %}Retirez votre propre double authentification depuis
+                <a href="/admin/account">Mon compte</a>, où un code valide est exigé — sans quoi une session
+                volée suffirait à la désactiver.
             {% else %}Compte introuvable.{% endif %}
         </div>
     {% endif %}
@@ -55,7 +59,7 @@
             <table class="table table-sm table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Compte</th><th>Rôle</th><th>État</th>
+                        <th>Compte</th><th>Rôle</th><th>2FA</th><th>État</th>
                         <th>Dernière connexion</th><th class="row-actions">Actions</th>
                     </tr>
                 </thead>
@@ -69,6 +73,13 @@
                             <div class="cell-meta"><code>{{ u.admin_user_email }}</code></div>
                         </td>
                         <td>{{ roles[u.admin_user_role]|default(u.admin_user_role) }}</td>
+                        <td>
+                            {% if u.admin_user_totp_confirmed_at %}
+                                <span class="badge bg-success"><i class="bi bi-shield-check"></i> active</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-shield-x"></i> absente</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if not u.admin_user_active %}
                                 <span class="badge bg-secondary">désactivé</span>
@@ -108,6 +119,16 @@
                                            placeholder="Nouveau mot de passe — 12 caractères minimum" aria-label="Nouveau mot de passe">
                                     <button class="btn btn-sm btn-outline-secondary" type="submit">Changer</button>
                                 </form>
+
+                                {% if u.admin_user_totp_confirmed_at and u.admin_user_id != current_id %}
+                                    <form method="post" action="/admin/users/{{ u.admin_user_id }}/2fa-reset" class="reserve-form">
+                                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit"
+                                                title="Téléphone perdu et plus de codes de secours">
+                                            <i class="bi bi-shield-slash"></i> Retirer la 2FA
+                                        </button>
+                                    </form>
+                                {% endif %}
 
                                 {% if verrouille or u.admin_user_failed_attempts > 0 %}
                                     <form method="post" action="/admin/users/{{ u.admin_user_id }}/unlock" class="reserve-form">

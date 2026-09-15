@@ -144,6 +144,20 @@ final class ReadinessRepository
 
 
     /**
+     * Comptes actifs sans double authentification.
+     *
+     * @return list<string> adresses
+     */
+    public function adminsWithoutTwoFactor(): array
+    {
+        return array_map('strval', $this->database->connection()->fetchFirstColumn(
+            'SELECT admin_user_email FROM t_admin_user
+              WHERE admin_user_active = 1 AND admin_user_totp_confirmed_at IS NULL
+              ORDER BY admin_user_email'
+        ));
+    }
+
+    /**
      * Enregistre une decision.
      *
      * `open` supprime la ligne plutot que de l'ecrire : l'absence de ligne est

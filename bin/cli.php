@@ -25,6 +25,7 @@ Commandes :
   drawing:run --sweepstake=<id>                         Tire le finaliste d'un concours clos
   drawing:run --grand-prize [--year=YYYY]               Tire le gagnant de l'annee
   readiness:check                                      Reevalue les reserves d'ouverture (code 1 si bloquant)
+  admin:2fa-reset --email=                             Retire la double authentification (telephone perdu)
 
 TXT;
 
@@ -52,6 +53,7 @@ $registry = [
     'gdpr:purge' => [App\Modules\Leads\Tasks\GdprPurgeTask::class, 'run'],
     'drawing:run' => [App\Modules\Drawings\Tasks\DrawingTask::class, 'run'],
     'readiness:check' => [App\Modules\Admin\Tasks\ReadinessCheckTask::class, 'run'],
+    'admin:2fa-reset' => [App\Modules\Admin\Tasks\ResetTwoFactorTask::class, 'run'],
     // leads:verify attend le choix d'un fournisseur de verification.
 ];
 

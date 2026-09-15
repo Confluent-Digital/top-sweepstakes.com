@@ -35,6 +35,8 @@ final class AdminAuthMiddleware implements MiddlewareInterface
         $path = $request->getUri()->getPath();
 
         // La page de connexion elle-meme doit rester accessible.
+        // /admin/login/code est couverte par ce prefixe : le second facteur se
+        // presente avant d'etre authentifie, c'est tout son objet.
         if (str_starts_with($path, '/admin/login') || str_starts_with($path, '/admin/logout')) {
             return $handler->handle($request);
         }

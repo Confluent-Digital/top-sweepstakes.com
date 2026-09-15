@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Database;
 use App\Middleware\CsrfMiddleware;
+use App\Modules\Admin\Controllers\AccountController;
 use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
@@ -60,7 +61,15 @@ $app->get('/out/{token}', OutController::class);
 // pas laisser un ecran ouvert par oubli.
 $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void {
     $admin->map(['GET', 'POST'], '/login', AuthController::class . ':login');
+    $admin->map(['GET', 'POST'], '/login/code', AuthController::class . ':code');
     $admin->get('/logout', AuthController::class . ':logout');
+
+    // Compte de l'utilisateur connecte. Ouvert a TOUS les roles : proteger son
+    // propre compte n'est pas une action d'administration.
+    $admin->get('/account', AccountController::class . ':index');
+    $admin->post('/account/2fa/enable', AccountController::class . ':enable');
+    $admin->post('/account/2fa/disable', AccountController::class . ':disable');
+    $admin->post('/account/recovery-codes', AccountController::class . ':recoveryCodes');
 
     $admin->get('', DashboardController::class . ':index');
     $admin->get('/', DashboardController::class . ':index');
@@ -88,6 +97,7 @@ $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void 
     $admin->post('/users/{id:[0-9]+}', UserAdminController::class . ':update');
     $admin->post('/users/{id:[0-9]+}/password', UserAdminController::class . ':password');
     $admin->post('/users/{id:[0-9]+}/unlock', UserAdminController::class . ':unlock');
+    $admin->post('/users/{id:[0-9]+}/2fa-reset', UserAdminController::class . ':resetTwoFactor');
 
     // Reserves d'ouverture : ce qui n'est pas fait et ce qui a ete decide a son
     // sujet. Ecran de lecture, plus un POST par decision.

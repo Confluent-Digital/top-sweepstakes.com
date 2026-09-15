@@ -12,6 +12,7 @@ use App\Core\Session\SessionStore;
 use App\Core\Signer;
 use App\Middleware\SecurityHeadersMiddleware;
 use App\Middleware\TemplateContextMiddleware;
+use App\Modules\Admin\Controllers\AccountController;
 use App\Modules\Admin\Controllers\AuthController;
 use App\Modules\Admin\Controllers\DashboardController;
 use App\Modules\Admin\Controllers\LeadAdminController;
@@ -31,6 +32,7 @@ use App\Modules\Admin\Models\Repositories\SettingRepository;
 use App\Modules\Admin\Services\ImageUploadService;
 use App\Modules\Admin\Services\ReadinessService;
 use App\Modules\Admin\Tasks\ReadinessCheckTask;
+use App\Modules\Admin\Tasks\ResetTwoFactorTask;
 use App\Modules\Leads\Models\Repositories\ConsentRepository;
 use App\Modules\Leads\Models\Repositories\LeadRepository;
 use App\Modules\Leads\Models\Repositories\SuppressionRepository;
@@ -184,6 +186,12 @@ $container->set(AuthController::class, fn(Container $c) => new AuthController(
     $c->get(SessionStore::class),
     $c->get(AdminUserRepository::class),
 ));
+$container->set(AccountController::class, fn(Container $c) => new AccountController(
+    $c->get(Twig::class),
+    $c->get(SessionStore::class),
+    $c->get(AdminUserRepository::class),
+    $c->get(Config::class),
+));
 $container->set(DashboardController::class, fn(Container $c) => new DashboardController(
     $c->get(Twig::class),
     $c->get(Database::class),
@@ -239,6 +247,9 @@ $container->set(ReadinessService::class, fn(Container $c) => new ReadinessServic
     $c->get(DrawingRepository::class),
     $rootDir . '/cache/readiness/checks.json',
     $c->get(LoggerInterface::class),
+));
+$container->set(ResetTwoFactorTask::class, fn(Container $c) => new ResetTwoFactorTask(
+    $c->get(AdminUserRepository::class),
 ));
 $container->set(ReadinessCheckTask::class, fn(Container $c) => new ReadinessCheckTask(
     $c->get(ReadinessService::class),

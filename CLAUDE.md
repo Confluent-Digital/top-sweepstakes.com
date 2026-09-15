@@ -104,10 +104,14 @@ Une erreur y est invisible à l'écran et se voit sur la facturation ou devant u
 1. **La chaîne display** — sélection d'offre → impression → clic → URL de sortie.
    Voir `.claude/rules/offers-display.md`. Toute modification passe par l'agent
    `offer-tracking-verifier`.
-2. **Les droits du back-office** — `AdminRole` décide, `AdminAuthMiddleware` applique, sur le
+2. **L'accès au back-office** — double authentification TOTP (`Totp`, RFC 6238, prouvée par les
+   vecteurs de la RFC). Un code n'est valable qu'une fois dans sa fenêtre de trente secondes :
+   `consumePeriod()` mémorise la dernière période consommée, sans quoi un code intercepté se
+   rejoue. Les codes de secours sont hachés, à usage unique, montrés une seule fois.
+3. **Les droits du back-office** — `AdminRole` décide, `AdminAuthMiddleware` applique, sur le
    chemin et la méthode. Une route ajoutée est donc couverte par construction. Ne jamais
    remplacer ce filtrage par des vérifications route par route : c'est celle qu'on oublie de
    poser qui ouvre tout.
-3. **Le consentement** — `t_lead_consent` est immuable et archive le texte réellement affiché.
+4. **Le consentement** — `t_lead_consent` est immuable et archive le texte réellement affiché.
    Voir `.claude/rules/legal-us.md`. Toute modification d'un formulaire ou d'un texte de
    consentement passe par l'agent `compliance-us`.

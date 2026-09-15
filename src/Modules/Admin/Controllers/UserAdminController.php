@@ -135,6 +135,38 @@ final class UserAdminController
         return $this->back($response, 'saved=password');
     }
 
+    /**
+     * Retire la double authentification d'un AUTRE compte.
+     *
+     * Le cas reel : un telephone perdu et plus de codes de secours. Sans ce
+     * geste, le seul recours serait la ligne de commande sur le serveur.
+     *
+     * Le compte retombe a un seul facteur : c'est une degradation volontaire,
+     * tracee, et la personne doit reactiver aussitot. Un administrateur ne peut
+     * pas le faire sur SON propre compte — cela contournerait l'exigence d'un
+     * code valide pour desactiver, et reduirait la protection a la simple
+     * possession d'une session.
+     */
+    public function resetTwoFactor(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) $args['id'];
+        $cible = $this->users->findById($id);
+        if ($cible === null) {
+            return $this->back($response, 'error=unknown');
+        }
+        if ($id === $this->currentId($request)) {
+            return $this->back($response, 'error=self_2fa');
+        }
+
+        $this->users->disableTwoFactor($id);
+        $this->log($request, 'user.2fa.reset', (string) $id, sprintf(
+            '%s — double authentification retiree par un administrateur',
+            (string) $cible['admin_user_email']
+        ));
+
+        return $this->back($response, 'saved=2fa_reset');
+    }
+
     public function unlock(Request $request, Response $response, array $args): Response
     {
         $id = (int) $args['id'];
