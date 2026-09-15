@@ -149,6 +149,9 @@ ${ACME}
 
 EOF
 )
+    # $() supprime les sauts de ligne finaux : sans cela le bloc suivant se
+    # colle au « } » precedent.
+    REDIR_HTTP="$REDIR_HTTP"$'\n\n'
 fi
 
 REDIR_HOTE=""
@@ -180,6 +183,7 @@ ${ACME}
 
 EOF
 )
+    REDIR_HOTE="$REDIR_HOTE"$'\n\n'
 fi
 
 HSTS=""
