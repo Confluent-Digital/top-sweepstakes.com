@@ -73,9 +73,22 @@ Corriger, au choix — **sur l'hote** :
 
 ```bash
 sed -i "s/^UID=.*/UID=$(id -u)/; s/^GID=.*/GID=$(id -g)/" .env   # aligner le conteneur sur les fichiers
-sudo chown -R "$(id -u):$(id -g)" .                               # aligner les fichiers sur le conteneur
+# ou, dans l'autre sens :
+sudo chown -R "$(id -u):$(id -g)" .
+sudo chown -R 999:999 .docker/data/mariadb                        # voir l'avertissement ci-dessous
 docker compose up -d --force-recreate                             # le `user:` n'est relu qu'a la creation
 ```
+
+**⚠️ Le `chown -R` global n'est pas sur tel quel.** `DOCKER_DB_DIRECTORY` pointe
+par defaut sur `./.docker/data/mariadb`, soit **dans l'arborescence du projet**,
+et ce repertoire appartient a `999:999` — le `mysql` de l'image MariaDB. Un
+`chown -R` sur le projet le lui retire et MariaDB refuse de demarrer. D'ou le
+second chown, qui le lui rend. Les deux scripts de `bin/` donnent desormais la
+paire de commandes, jamais la premiere seule.
+
+Un repertoire de donnees pose hors de l'arborescence — ou un volume nomme —
+supprimerait le piege. C'est le choix a faire si la production venait a etre
+reinstallee.
 
 Le `user:` d'un service n'est lu **qu'a la creation du conteneur** : modifier le
 `.env` ne suffit pas, il faut recreer.

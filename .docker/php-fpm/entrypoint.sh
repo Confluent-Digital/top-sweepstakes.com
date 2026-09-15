@@ -32,6 +32,7 @@ if [ ! -w . ]; then
         else
             echo "[entrypoint] Les deux doivent coincider. Sur l'HOTE :"
             echo "[entrypoint]   sudo chown -R $ME .   # aligner les fichiers sur le conteneur"
+            echo "[entrypoint]   sudo chown -R 999:999 .docker/data/mariadb   # SAUF les donnees MariaDB"
             if [ "${OWNER%%:*}" != "0" ]; then
                 # L'inverse — aligner le conteneur sur les fichiers — n'est
                 # propose que si le proprietaire n'est pas root : mettre UID=0

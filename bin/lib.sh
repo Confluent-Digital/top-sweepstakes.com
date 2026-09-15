@@ -66,12 +66,37 @@ require_matching_uid() {
         if [ "$owner_uid" != "0" ]; then
             echo "   Corriger l'un ou l'autre :" >&2
             echo "     sed -i 's/^UID=.*/UID=$owner_uid/; s/^GID=.*/GID=$owner_gid/' .env" >&2
-            echo "     ou  sudo chown -R $env_uid:$env_gid $(pwd)" >&2
+            echo "     ou  $(chown_commands "$env_uid" "$env_gid")" >&2
         else
             echo "   Le depot appartient a root : le chown vers un utilisateur non privilegie" >&2
             echo "   plutot que de faire tourner PHP en root." >&2
-            echo "     sudo chown -R $env_uid:$env_gid $(pwd)" >&2
+            echo "     $(chown_commands "$env_uid" "$env_gid")" >&2
         fi
+        echo "" >&2
+        echo "   Puis RECREER le conteneur : le \`user:\` d'un service n'est lu qu'a sa creation." >&2
+        echo "     compose up -d --force-recreate" >&2
         exit 1
     fi
+}
+
+# Commandes de chown sures pour ce projet.
+#
+# Le repertoire de donnees de MariaDB vit DANS l'arborescence
+# (DOCKER_DB_DIRECTORY=./.docker/data/mariadb) et appartient au mysql de l'image,
+# soit 999:999. Un `chown -R` global sur le projet le lui retirerait et MariaDB
+# refuserait de demarrer. Le second chown le rend a son proprietaire.
+chown_commands() {
+    local uid="$1" gid="$2" datadir
+    datadir=$(grep -E '^DOCKER_DB_DIRECTORY=' .env 2>/dev/null | tail -1 | cut -d= -f2)
+    datadir=${datadir:-./.docker/data/mariadb}
+
+    printf 'sudo chown -R %s:%s %s' "$uid" "$gid" "$(pwd)"
+    # Uniquement si les donnees sont bien sous le projet : hors de l'arborescence,
+    # le chown global ne les touche pas et le second geste n'a pas lieu d'etre.
+    case "$datadir" in
+        ./*|"$(pwd)"/*)
+            printf '\n     sudo chown -R 999:999 %s   # MariaDB tourne en 999, ne pas le lui retirer' \
+                "${datadir#./}"
+            ;;
+    esac
 }
