@@ -43,6 +43,39 @@ ni sa cause et fait chercher le problème dans le script.
    - formulaire ou texte de consentement → agent `compliance-us` ;
    - reste → agent `php-code-reviewer`.
 
+## nginx de l'hôte
+
+Le site tourne derrière **deux** nginx : celui du conteneur, qui parle à PHP-FPM
+et n'écoute que sur `127.0.0.1:${DOCKER_NGINX_PORT}`, et celui de l'hôte, qui
+porte le nom de domaine et relaie.
+
+```bash
+./bin/make-vhost.sh --print      # voir sans écrire
+./bin/make-vhost.sh              # écrit /data/nginx/<APP_DOMAIN>.conf
+sudo systemctl reload nginx
+```
+
+Le domaine et le port sont lus dans le `.env`, la limite d'envoi dans
+`uploads.ini` : rien n'est écrit en dur, et le fichier produit suit
+l'environnement.
+
+Deux choses que ce vhost doit faire et qu'on ne peut pas omettre :
+
+- **`X-Real-IP` écrasé avec `$remote_addr`.** L'IP du participant est archivée
+  dans les preuves de consentement (TCPA, CAN-SPAM). Sans cet en-tête, chaque
+  preuve porterait l'adresse du proxy et ne prouverait rien. Il est *écrasé* et
+  non relayé, car un client peut envoyer ce qu'il veut — et
+  `ConsentRecorder::clientIp()` lit `X-Real-IP` en premier, précisément pour ça.
+- **`client_max_body_size` au moins égal à `post_max_size`.** En dessous, nginx
+  répond 413 avant que PHP ne voie le fichier, et le téléversement d'un visuel
+  de concours échoue sans message exploitable.
+
+Le TLS reste à faire ; la marche à suivre est en commentaire en fin de fichier
+généré. **Point de vigilance** : le nginx du conteneur pose
+`fastcgi_param HTTPS off`. Tant qu'il n'est pas rendu conditionnel à
+`X-Forwarded-Proto`, PHP se croira en clair et les cookies de session n'auront
+pas l'attribut `Secure`.
+
 ## Avant d'ouvrir le site au trafic
 
 `/admin/readiness` — **Réserves d'ouverture** — liste ce qui n'est pas fait : les contrôles
