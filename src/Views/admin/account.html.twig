@@ -9,6 +9,19 @@
         </div>
     </div>
 
+    {# Redirection depuis n'importe quel écran : le compte n'a pas encore sa
+       double authentification, et rien d'autre ne lui est ouvert. #}
+    {% if setup and not actif %}
+        <div class="alert alert-warning">
+            <strong><i class="bi bi-shield-exclamation"></i> Activation requise avant d'aller plus loin.</strong>
+            <p class="mb-0 mt-1" style="font-size:var(--ts-fs-sm)">
+                Le back-office donne accès aux participants et à leurs données personnelles. Il n'est
+                pas ouvert tant que votre compte n'est protégé que par un mot de passe. Comptez deux
+                minutes.
+            </p>
+        </div>
+    {% endif %}
+
     {% if saved %}
         <div class="alert alert-success py-2"><i class="bi bi-check2"></i>
             {% if saved == 'enabled' %}Double authentification activée.
@@ -105,19 +118,27 @@
                 </p>
 
                 <div class="row g-4 align-items-start">
-                    <div class="col-md-auto">
-                        <div style="background:#fff;padding:.5rem;border-radius:var(--ts-radius);display:inline-block">
-                            {{ qr|raw }}{# SVG produit par le serveur a partir du secret, aucune donnee saisie #}
+                    {# Le QR peut manquer — bibliothèque absente, erreur de rendu. La
+                       saisie manuelle de la clé suffit, et l'activation étant
+                       obligatoire, mieux vaut un écran dégradé qu'un écran mort. #}
+                    {% if qr %}
+                        <div class="col-md-auto">
+                            <div style="background:#fff;padding:.5rem;border-radius:var(--ts-radius);display:inline-block">
+                                {{ qr|raw }}{# SVG produit par le serveur a partir du secret, aucune donnee saisie #}
+                            </div>
                         </div>
-                    </div>
+                    {% endif %}
                     <div class="col-md">
                         <ol style="font-size:var(--ts-fs-sm);padding-left:1.1rem">
+                            {% if qr %}
+                                <li class="mb-2">
+                                    Scannez ce QR avec votre application d'authentification
+                                    (Google Authenticator, Authy, 1Password, Bitwarden…).
+                                </li>
+                            {% endif %}
                             <li class="mb-2">
-                                Scannez ce QR avec votre application d'authentification
-                                (Google Authenticator, Authy, 1Password, Bitwarden…).
-                            </li>
-                            <li class="mb-2">
-                                Ou saisissez la clé à la main :<br>
+                                {% if qr %}Ou saisissez{% else %}Saisissez{% endif %}
+                                la clé dans votre application d'authentification :<br>
                                 <code style="font-size:var(--ts-fs-base);letter-spacing:.06em">{{ secret_lisible }}</code>
                             </li>
                             <li>Entrez le code affiché pour confirmer.</li>

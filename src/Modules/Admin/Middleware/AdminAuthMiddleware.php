@@ -59,7 +59,35 @@ final class AdminAuthMiddleware implements MiddlewareInterface
             return $this->refuse($request, $role);
         }
 
+        // Double authentification OBLIGATOIRE. Tant qu'elle n'est pas active,
+        // le compte ne voit que l'ecran qui permet de l'activer.
+        //
+        // Un reglage qui permettrait de s'en dispenser serait un reglage qu'on
+        // finirait par desactiver « le temps de », et le temps de dure. Le
+        // seul contournement passe donc par le serveur : `admin:2fa-reset`.
+        if (!AdminUserRepository::hasTwoFactor($user) && !$this->isEnrolmentPath($path)) {
+            return (new ResponseFactory())->createResponse(302)
+                ->withHeader('Location', '/admin/account?setup=1');
+        }
+
         return $handler->handle($request->withAttribute('admin_user', $user));
+    }
+
+    /**
+     * Chemins accessibles a un compte qui n'a pas encore sa double
+     * authentification : de quoi l'activer, et de quoi repartir.
+     *
+     * Rien d'autre — pas meme le tableau de bord, qui affiche deja des volumes
+     * de participations.
+     */
+    private function isEnrolmentPath(string $path): bool
+    {
+        foreach (['/admin/account', '/admin/logout', '/admin/login'] as $permis) {
+            if ($path === $permis || str_starts_with($path, $permis . '/')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -233,6 +233,29 @@ Le nginx du conteneur lit `X-Forwarded-Proto` pour en déduire
 `fastcgi_param HTTPS` : le vhost doit donc poser cet en-tête, ce que fait celui
 qui est généré.
 
+## Double authentification
+
+**Obligatoire, sans réglage pour s'en dispenser.** Tant qu'un compte n'a pas
+activé la sienne, tout écran du back-office le renvoie sur `/admin/account` — y
+compris le tableau de bord, qui affiche déjà des volumes de participations.
+Un réglage qui permettrait de s'en passer serait désactivé « le temps de », et
+le temps de dure.
+
+Le seul contournement passe par le serveur :
+
+```bash
+docker exec topsweepstakes_php php bin/cli.php admin:2fa-reset --email=…
+```
+
+Un administrateur peut aussi la retirer à quelqu'un d'autre depuis
+`/admin/users` — téléphone perdu, plus de codes de secours. Jamais sur son
+propre compte : cela contournerait l'exigence d'un code valide pour désactiver,
+et réduirait la protection à la simple possession d'une session.
+
+Le QR est rendu par le serveur, et son échec **n'est pas fatal** : la saisie
+manuelle de la clé suffit. L'activation étant obligatoire, une exception à cet
+endroit enfermerait le compte dehors sans recours.
+
 ## Avant d'ouvrir le site au trafic
 
 `/admin/readiness` — **Réserves d'ouverture** — liste ce qui n'est pas fait : les contrôles

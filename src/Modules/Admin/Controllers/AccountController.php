@@ -78,6 +78,7 @@ final class AccountController
             'qr' => $qr,
             'codes' => is_array($codes) ? $codes : null,
             'restants' => $actif ? $this->users->countUnusedRecoveryCodes((int) $user['admin_user_id']) : 0,
+            'setup' => isset($request->getQueryParams()['setup']),
             'saved' => $request->getQueryParams()['saved'] ?? null,
             'error' => $request->getQueryParams()['error'] ?? null,
         ]);
@@ -174,11 +175,22 @@ final class AccountController
         return $user;
     }
 
-    /** QR en SVG, rendu par le serveur : aucune dependance a un service tiers. */
-    private function qr(string $uri): string
+    /**
+     * QR en SVG, rendu par le serveur : aucune dependance a un service tiers.
+     *
+     * L'echec n'est PAS fatal, et c'est important : l'activation etant
+     * obligatoire, une exception ici enfermerait le compte dehors sans recours
+     * — plus de back-office, et pas d'ecran pour s'en sortir. La saisie
+     * manuelle de la cle reste possible, elle suffit.
+     */
+    private function qr(string $uri): ?string
     {
-        $writer = new Writer(new ImageRenderer(new RendererStyle(220, 1), new SvgImageBackEnd()));
-        return $writer->writeString($uri);
+        try {
+            $writer = new Writer(new ImageRenderer(new RendererStyle(220, 1), new SvgImageBackEnd()));
+            return $writer->writeString($uri);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     private function log(Request $request, string $action, string $target, string $detail): void
