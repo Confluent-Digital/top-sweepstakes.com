@@ -52,9 +52,32 @@ fi
 mkdir -p logs cache/twig cache/legal cache/readiness
 chmod -R 777 logs cache 2>/dev/null || true
 
+# Dependances, au premier demarrage seulement.
+#
+# MEME regle que App\Core\Config::isProduction() — egalite stricte avec
+# « production », « development » par defaut. Si les deux divergeaient, le
+# conteneur et l'application ne parleraient pas du meme environnement, et le
+# desaccord ne se verrait qu'au moment ou il coute : des outils de
+# developpement installes sur un serveur public, ou un cache Twig absent la ou
+# on l'attend.
+#
+# En production, --no-dev retire PHPUnit, PHPStan, PHPCS, Phinx et Faker :
+# quelques milliers de fichiers en moins, et surtout aucun outil de
+# developpement sous la racine web. --optimize-autoloader s'aligne sur
+# bin/update.sh.
+#
+# Phinx est dans `require` et non `require-dev` : jouer une migration est une
+# operation de PRODUCTION. L'y avoir laisse en dependance de developpement
+# faisait echouer bin/update.sh a tous les coups — il retirait Phinx a la ligne
+# precedant son appel.
 if [ -f "composer.json" ] && [ ! -d "vendor" ]; then
-    echo "[entrypoint] composer install"
-    composer install --no-interaction --prefer-dist
+    if [ "$(printenv APP_ENV 2>/dev/null)" = "production" ]; then
+        echo "[entrypoint] composer install (production : sans les dependances de developpement)"
+        composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+    else
+        echo "[entrypoint] composer install (developpement : avec les outils de test et d'analyse)"
+        composer install --no-interaction --prefer-dist
+    fi
 fi
 
 exec "$@"

@@ -17,6 +17,16 @@ Branche principale : `main`. Une modification passe par une branche, une PR, une
 le serveur, et reconstruit les images. Tester une mise en production, c'est lancer `update.sh` sur un
 environnement déjà monté.
 
+Le `composer install` de l'entrypoint suit la **même règle que
+`App\Core\Config::isProduction()`** — égalité stricte avec `production`,
+`development` par défaut. En production il pose `--no-dev --optimize-autoloader`
+et retire donc PHPUnit, PHPStan et PHPCS ; ailleurs il installe tout.
+
+**Phinx est dans `require`, pas `require-dev`** : jouer une migration est une
+opération de production. L'y avoir laissé en dépendance de développement faisait
+échouer `update.sh` à tous les coups — `composer install --no-dev` retirait
+Phinx à la ligne précédant `vendor/bin/phinx migrate`. Ne pas l'y remettre.
+
 Les deux sourcent `bin/lib.sh`, qui vérifie que le démon Docker répond et détecte Docker Compose —
 plugin `docker compose` ou binaire `docker-compose`. Sans cette détection, un serveur où le plugin
 manque répond `unknown shorthand flag: 'd' in -d`, un message du CLI Docker qui ne nomme ni Compose
