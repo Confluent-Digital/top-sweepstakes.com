@@ -37,6 +37,8 @@ final class SweepstakesCatalogSeeder extends AbstractSeed
 
     public function run(): void
     {
+        \App\Core\SeedGuard::refuseInProduction('SweepstakesCatalogSeeder');
+
         foreach ($this->catalogue() as $sweepstake) {
             $this->upsert($sweepstake);
         }

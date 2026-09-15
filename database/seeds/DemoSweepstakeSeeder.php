@@ -15,6 +15,8 @@ final class DemoSweepstakeSeeder extends AbstractSeed
 {
     public function run(): void
     {
+        \App\Core\SeedGuard::refuseInProduction('DemoSweepstakeSeeder');
+
         // Le seed doit rester rejouable. On ne supprime pas le concours : des
         // qu'un participant y est rattache, la cle etrangere RESTRICT s'y
         // oppose — et c'est le bon comportement, on ne supprime pas un concours

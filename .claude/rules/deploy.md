@@ -10,8 +10,31 @@ Branche principale : `main`. Une modification passe par une branche, une PR, une
 
 | Script | Pour quoi | Ce qu'il fait |
 |---|---|---|
-| `./bin/setup.sh` | **première installation, en développement** | crée le `.env` s'il manque, monte les conteneurs (`compose up -d --build`), `composer install` **avec** les dépendances de développement, migre |
-| `./bin/update.sh` | **mise à jour d'un environnement existant, production comprise** | `git pull --ff-only`, `composer install --no-dev --optimize-autoloader`, `phinx migrate -e prod`, purge du cache Twig |
+| `./bin/setup.sh` | **première installation, en développement** | crée le `.env` s'il manque (avec les UID/GID réels), monte les conteneurs, `composer install` **avec** les dépendances de développement, migre en `-e dev` |
+| `./bin/install.sh` | **première installation d'une production** | vérifie `.env` (APP_ENV, APP_SECRET, mots de passe, domaine), monte, contrôle que la base existe, `composer install --no-dev`, migre en `-e prod`, rappelle de créer le compte de back-office. **Ne sème rien.** |
+| `./bin/update.sh` | **mise à jour d'un environnement existant** | `git pull --ff-only`, `composer install --no-dev --optimize-autoloader`, `phinx migrate -e prod`, purge du cache Twig |
+
+## ⚠️ Les seeds ne vont pas en production
+
+`database/seeds/` ne pose pas des données neutres : les trois seeders publient
+des concours — `sweepstake_status = 'published'` — avec des règlements générés
+jamais relus par un juriste et des offres portant des identifiants de régie
+factices (`DEMO1000`, `ids=996`). Les lancer sur un domaine public mettrait en
+ligne de faux jeux-concours américains, immédiatement visibles et immédiatement
+opposables.
+
+`App\Core\SeedGuard` les refuse dès que `APP_ENV=production`, avec la marche à
+suivre correcte. La dérogation existe — `ALLOW_SEEDS_IN_PRODUCTION=1` — mais
+elle doit être écrite, pas déduite.
+
+En production, la première installation se fait donc **sans seed** :
+
+```bash
+./bin/install.sh
+docker exec topsweepstakes_php php bin/cli.php admin:create \
+  --email=… --password='…' --name='…'
+# puis les concours se créent depuis /admin/sweepstakes
+```
 
 `setup.sh` n'est **pas** le script de mise en production : il installe PHPUnit, PHPStan et PHPCS sur
 le serveur, et reconstruit les images. Tester une mise en production, c'est lancer `update.sh` sur un

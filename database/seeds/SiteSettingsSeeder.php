@@ -16,6 +16,8 @@ final class SiteSettingsSeeder extends AbstractSeed
 {
     public function run(): void
     {
+        \App\Core\SeedGuard::refuseInProduction('SiteSettingsSeeder');
+
         $settings = [
             'site_name' => 'Top Sweepstakes',
             'site_tagline' => 'Win big, enter free',
