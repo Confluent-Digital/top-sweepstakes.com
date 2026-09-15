@@ -19,6 +19,7 @@ use App\Modules\Admin\Controllers\OfferAdminController;
 use App\Modules\Admin\Controllers\ReadinessController;
 use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
+use App\Modules\Admin\Controllers\UserAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
 use App\Modules\Admin\Middleware\ReadinessContextMiddleware;
 use App\Modules\Admin\Models\Repositories\AdminLeadRepository;
@@ -209,6 +210,10 @@ $container->set(SettingController::class, fn(Container $c) => new SettingControl
     $c->get(ImageUploadService::class),
     $c->get(AdminUserRepository::class),
     $c->get(LegalContentService::class),
+));
+$container->set(UserAdminController::class, fn(Container $c) => new UserAdminController(
+    $c->get(Twig::class),
+    $c->get(AdminUserRepository::class),
 ));
 $container->set(StatsController::class, fn(Container $c) => new StatsController(
     $c->get(Twig::class),

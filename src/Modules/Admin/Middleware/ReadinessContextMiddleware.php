@@ -51,6 +51,14 @@ final class ReadinessContextMiddleware implements MiddlewareInterface
 
         $this->view->getEnvironment()->addGlobal('readiness', $counts);
 
+        // Le role, pour que la navigation ne propose pas des ecrans que le
+        // middleware refusera : un lien qui mene a un 403 se lit comme une panne.
+        $user = $request->getAttribute('admin_user');
+        $this->view->getEnvironment()->addGlobal(
+            'admin_role',
+            is_array($user) ? (string) ($user['admin_user_role'] ?? '') : ''
+        );
+
         return $handler->handle($request);
     }
 }

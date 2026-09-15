@@ -81,6 +81,74 @@ final class AdminUserRepository
         return (int) $this->database->connection()->lastInsertId();
     }
 
+    /**
+     * Tous les comptes, le plus recemment connecte en tete.
+     *
+     * Le hachage du mot de passe n'est PAS selectionne : il n'a rien a faire
+     * dans un gabarit, et ne pas le charger est plus sur que se souvenir de ne
+     * pas l'afficher.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function all(): array
+    {
+        return $this->database->connection()->fetchAllAssociative(
+            'SELECT admin_user_id, admin_user_email, admin_user_name, admin_user_role,
+                    admin_user_active, admin_user_last_login_at, admin_user_failed_attempts,
+                    admin_user_locked_until, created_at
+               FROM t_admin_user
+              ORDER BY admin_user_active DESC, admin_user_last_login_at DESC, admin_user_id ASC'
+        );
+    }
+
+    /** Administrateurs actifs, hors celui qu'on s'apprete a modifier. */
+    public function countOtherActiveAdmins(int $exceptId): int
+    {
+        return (int) $this->database->connection()->fetchOne(
+            'SELECT COUNT(*) FROM t_admin_user
+              WHERE admin_user_role = :role AND admin_user_active = 1 AND admin_user_id != :id',
+            ['role' => 'admin', 'id' => $exceptId]
+        );
+    }
+
+    /** @param array<string,mixed> $values */
+    public function update(int $id, array $values): void
+    {
+        $permis = ['admin_user_email', 'admin_user_name', 'admin_user_role', 'admin_user_active'];
+        $ecrit = array_intersect_key($values, array_flip($permis));
+        if ($ecrit === []) {
+            return;
+        }
+        if (isset($ecrit['admin_user_email'])) {
+            $ecrit['admin_user_email'] = strtolower(trim((string) $ecrit['admin_user_email']));
+        }
+        $this->database->connection()->update('t_admin_user', $ecrit, ['admin_user_id' => $id]);
+    }
+
+    /**
+     * Change le mot de passe et LEVE le verrouillage.
+     *
+     * Les deux vont ensemble : on change le mot de passe d'un compte bloque
+     * precisement pour le debloquer, et laisser le compteur d'echecs en place
+     * ferait croire a un nouveau probleme.
+     */
+    public function setPassword(int $id, string $password): void
+    {
+        $this->database->connection()->update('t_admin_user', [
+            'admin_user_password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'admin_user_failed_attempts' => 0,
+            'admin_user_locked_until' => null,
+        ], ['admin_user_id' => $id]);
+    }
+
+    public function unlock(int $id): void
+    {
+        $this->database->connection()->update('t_admin_user', [
+            'admin_user_failed_attempts' => 0,
+            'admin_user_locked_until' => null,
+        ], ['admin_user_id' => $id]);
+    }
+
     public function log(?int $userId, string $action, string $target, string $detail, string $ip): void
     {
         $this->database->connection()->insert('t_admin_log', [

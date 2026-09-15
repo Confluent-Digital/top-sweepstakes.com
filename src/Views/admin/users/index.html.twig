@@ -1,0 +1,169 @@
+{% extends 'admin/layout.html.twig' %}
+{% block title %}Comptes{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Comptes de back-office</h1>
+            <div class="page-sub">
+                Qui accède à quoi. Les rôles sont appliqués à chaque requête, pas seulement affichés.
+            </div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-primary btn-sm" href="#nouveau"><i class="bi bi-person-plus"></i> Nouveau compte</a>
+        </div>
+    </div>
+
+    {% if saved %}
+        <div class="alert alert-success py-2"><i class="bi bi-check2"></i>
+            {% if saved == 'created' %}Compte créé.
+            {% elseif saved == 'password' %}Mot de passe changé, verrouillage levé.
+            {% elseif saved == 'unlocked' %}Verrouillage levé.
+            {% else %}Compte enregistré.{% endif %}
+        </div>
+    {% endif %}
+    {% if error %}
+        <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i>
+            {% if error == 'email' %}Adresse e-mail invalide.
+            {% elseif error == 'password' %}Le mot de passe doit faire au moins 12 caractères.
+            {% elseif error == 'exists' %}Un compte existe déjà pour cette adresse.
+            {% elseif error == 'role' %}Rôle inconnu.
+            {% elseif error == 'last_admin' %}
+                Impossible : c'est le <strong>dernier administrateur actif</strong>. Le désactiver ou le
+                rétrograder fermerait l'accès aux comptes et aux réglages pour tout le monde — il faudrait
+                repasser par la ligne de commande sur le serveur.
+            {% elseif error == 'self' %}Vous ne pouvez pas désactiver votre propre compte.
+            {% else %}Compte introuvable.{% endif %}
+        </div>
+    {% endif %}
+
+    {# Ce que chaque rôle permet, sous les yeux au moment de le choisir. #}
+    <div class="row g-3 mb-3">
+        {% for value, label in roles %}
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header"><i class="bi bi-shield-check"></i> {{ label }}</div>
+                    <div class="p-3 pt-2" style="font-size:var(--ts-fs-sm)">{{ descriptions[value] }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="card card-table">
+        <div class="card-header"><i class="bi bi-people"></i> {{ users|length }} compte{{ users|length > 1 ? 's' : '' }}</div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Compte</th><th>Rôle</th><th>État</th>
+                        <th>Dernière connexion</th><th class="row-actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for u in users %}
+                    {% set verrouille = u.admin_user_locked_until and u.admin_user_locked_until > "now"|date("Y-m-d H:i:s") %}
+                    <tr class="{{ not u.admin_user_active ? 'row-off' : (verrouille ? 'row-warn' : '') }}">
+                        <td class="cell-key">
+                            {{ u.admin_user_name }}
+                            {% if u.admin_user_id == current_id %}<span class="badge bg-secondary">vous</span>{% endif %}
+                            <div class="cell-meta"><code>{{ u.admin_user_email }}</code></div>
+                        </td>
+                        <td>{{ roles[u.admin_user_role]|default(u.admin_user_role) }}</td>
+                        <td>
+                            {% if not u.admin_user_active %}
+                                <span class="badge bg-secondary">désactivé</span>
+                            {% elseif verrouille %}
+                                <span class="badge bg-warning">verrouillé</span>
+                            {% else %}
+                                <span class="badge bg-success">actif</span>
+                            {% endif %}
+                            {% if u.admin_user_failed_attempts > 0 %}
+                                <span class="cell-meta">{{ u.admin_user_failed_attempts }} échec(s)</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-meta">{{ u.admin_user_last_login_at ?: 'jamais' }}</td>
+                        <td class="row-actions">
+                            <details class="reserve-decide d-inline-block text-start">
+                                <summary>Modifier</summary>
+                                <form method="post" action="/admin/users/{{ u.admin_user_id }}" class="reserve-form">
+                                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                    <input class="form-control form-control-sm" style="flex:1 1 10rem"
+                                           type="text" name="name" value="{{ u.admin_user_name }}" aria-label="Nom">
+                                    <select class="form-select form-select-sm" name="role" aria-label="Rôle">
+                                        {% for value, label in roles %}
+                                            <option value="{{ value }}" {{ u.admin_user_role == value ? 'selected' }}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label class="form-check-label" style="font-size:var(--ts-fs-xs)">
+                                        <input class="form-check-input" type="checkbox" name="active" value="1"
+                                               {{ u.admin_user_active ? 'checked' }}> actif
+                                    </label>
+                                    <button class="btn btn-sm btn-primary" type="submit">Enregistrer</button>
+                                </form>
+
+                                <form method="post" action="/admin/users/{{ u.admin_user_id }}/password" class="reserve-form">
+                                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                    <input class="form-control form-control-sm" style="flex:1 1 14rem"
+                                           type="password" name="password" minlength="12" autocomplete="new-password"
+                                           placeholder="Nouveau mot de passe — 12 caractères minimum" aria-label="Nouveau mot de passe">
+                                    <button class="btn btn-sm btn-outline-secondary" type="submit">Changer</button>
+                                </form>
+
+                                {% if verrouille or u.admin_user_failed_attempts > 0 %}
+                                    <form method="post" action="/admin/users/{{ u.admin_user_id }}/unlock" class="reserve-form">
+                                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                            <i class="bi bi-unlock"></i> Lever le verrouillage
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </details>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mt-3" id="nouveau">
+        <div class="card-header"><i class="bi bi-person-plus"></i> Nouveau compte</div>
+        <form method="post" action="/admin/users/new" class="p-3">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label" for="email">Adresse e-mail</label>
+                    <input class="form-control form-control-sm" id="email" type="email" name="email" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="name">Nom</label>
+                    <input class="form-control form-control-sm" id="name" type="text" name="name">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="role">Rôle</label>
+                    <select class="form-select form-select-sm" id="role" name="role">
+                        {% for value, label in roles %}
+                            <option value="{{ value }}" {{ value == 'viewer' ? 'selected' }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="password">Mot de passe</label>
+                    <input class="form-control form-control-sm" id="password" type="password" name="password"
+                           minlength="12" autocomplete="new-password" required>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm mt-3" type="submit">Créer le compte</button>
+            <p class="reserve-hint mt-2">
+                « Lecture seule » par défaut : un compte se crée au droit minimal, il s'élargit ensuite si
+                le besoin est réel.
+            </p>
+        </form>
+    </div>
+
+    <p class="screen-note mt-3">
+        Les rôles sont vérifiés à <strong>chaque requête</strong>, sur le chemin et la méthode — une
+        page ajoutée demain est couverte sans qu'on ait à y penser. Toute création, modification de rôle
+        ou changement de mot de passe est inscrite dans le journal d'administration.
+    </p>
+{% endblock %}

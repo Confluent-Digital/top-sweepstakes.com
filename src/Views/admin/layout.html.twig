@@ -46,13 +46,18 @@
                     {url: '/admin/offers',     label: 'Offres',          icon: 'badge-ad'},
                     {url: '/admin/leads',      label: 'Participants',    icon: 'people'},
                     {url: '/admin/drawings',   label: 'Tirages',         icon: 'shuffle'},
-                    {url: '/admin/settings',   label: 'Réglages',        icon: 'gear'},
+                    {url: '/admin/settings',   label: 'Réglages',        icon: 'gear', admin: true},
+                    {url: '/admin/users',      label: 'Comptes',         icon: 'people-fill', admin: true},
                     {url: '/admin/readiness',  label: 'Réserves',        icon: 'clipboard-check'},
                     {url: '',                  label: '',                icon: ''},
                     {url: '/admin/stats/offers',  label: 'Stats offres',  icon: 'bar-chart'},
                     {url: '/admin/stats/sources', label: 'Stats sources', icon: 'signpost-split'}
                 ] %}
-                    {% if item.url == '' %}
+                    {# Les ecrans reserves ne sont pas proposes a qui ne peut pas les
+                       ouvrir : le middleware refuserait, mais un lien qui mene a un
+                       403 se lit comme une panne. #}
+                    {% if item.admin|default(false) and admin_role|default('') != 'admin' %}
+                    {% elseif item.url == '' %}
                         <li class="nav-item d-none d-lg-flex"><span class="nav-sep"></span></li>
                     {% else %}
                         {% set active = item.url == '/admin' ? current == '/admin' : current starts with item.url %}

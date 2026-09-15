@@ -11,6 +11,7 @@ use App\Modules\Admin\Controllers\OfferAdminController;
 use App\Modules\Admin\Controllers\ReadinessController;
 use App\Modules\Admin\Controllers\SettingController;
 use App\Modules\Admin\Controllers\SweepstakeAdminController;
+use App\Modules\Admin\Controllers\UserAdminController;
 use App\Modules\Admin\Middleware\AdminAuthMiddleware;
 use App\Modules\Admin\Middleware\ReadinessContextMiddleware;
 use App\Modules\Drawings\Controllers\DrawingAdminController;
@@ -79,6 +80,14 @@ $app->group('/admin', function (\Slim\Routing\RouteCollectorProxy $admin): void 
     $admin->get('/leads/{id:[0-9]+}', LeadAdminController::class . ':show');
 
     $admin->map(['GET', 'POST'], '/settings', SettingController::class . ':edit');
+
+    // Comptes de back-office. Reserve aux administrateurs : le filtrage se fait
+    // dans AdminAuthMiddleware, sur le prefixe, et non route par route.
+    $admin->get('/users', UserAdminController::class . ':index');
+    $admin->post('/users/new', UserAdminController::class . ':create');
+    $admin->post('/users/{id:[0-9]+}', UserAdminController::class . ':update');
+    $admin->post('/users/{id:[0-9]+}/password', UserAdminController::class . ':password');
+    $admin->post('/users/{id:[0-9]+}/unlock', UserAdminController::class . ':unlock');
 
     // Reserves d'ouverture : ce qui n'est pas fait et ce qui a ete decide a son
     // sujet. Ecran de lecture, plus un POST par decision.
