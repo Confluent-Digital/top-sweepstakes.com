@@ -93,9 +93,18 @@ if [ "$TLS" = "1" ]; then
     # Reprise de session : evite une poignee de main complete a chaque nouvelle
     # connexion. Les tickets sont desactives — sans rotation de clef, ils
     # affaiblissent la confidentialite persistante.
-    SSL="$SSL
-    ssl_session_cache   shared:TLS_${SLUG}:10m;
-    ssl_session_timeout 1d;
+    #
+    # Mais le options-ssl-nginx.conf de certbot les definit DEJA. Les reecrire
+    # par-dessus fait echouer nginx : « ssl_session_timeout directive is
+    # duplicate ». On n'ajoute donc que ce que l'include ne fournit pas.
+    INCLUDE="$CONF_DIR/options-ssl-nginx.conf"
+    fournie() { [ -r "$INCLUDE" ] && grep -qE "^\s*$1" "$INCLUDE"; }
+
+    fournie ssl_session_cache   || SSL="$SSL
+    ssl_session_cache   shared:TLS_${SLUG}:10m;"
+    fournie ssl_session_timeout || SSL="$SSL
+    ssl_session_timeout 1d;"
+    fournie ssl_session_tickets || SSL="$SSL
     ssl_session_tickets off;"
 fi
 
@@ -334,9 +343,23 @@ if SORTIE=$(nginx -t 2>&1); then
     printf '%s\n' "$SORTIE" | grep -v '\[warn\]' | sed 's/^/  /'
     echo
     echo "Recharger nginx :  sudo systemctl reload nginx"
-else
-    printf '%s\n' "$SORTIE" | grep -v '\[warn\]' | sed 's/^/  /' >&2
-    echo >&2
-    echo "!! Configuration nginx invalide — NE PAS recharger avant correction." >&2
-    exit 1
+    exit 0
 fi
+
+# Configuration invalide : on REPREND l'etat precedent plutot que de laisser un
+# fichier casse en place. nginx tourne encore sur son ancienne configuration —
+# le site n'est donc pas tombe — mais le prochain rechargement, par qui que ce
+# soit et pour quelque raison que ce soit, echouerait.
+printf '%s\n' "$SORTIE" | grep -v '\[warn\]' | sed 's/^/  /' >&2
+echo >&2
+echo "!! Configuration nginx invalide." >&2
+if [ -n "${SAUVEGARDE:-}" ] && [ -f "$SAUVEGARDE" ]; then
+    cp -a "$SAUVEGARDE" "$FILE"
+    echo "   Fichier precedent RESTAURE depuis $SAUVEGARDE." >&2
+    echo "   nginx tourne toujours sur sa configuration actuelle, le site est debout." >&2
+else
+    rm -f "$FILE"
+    echo "   Fichier retire (il n'y en avait pas avant)." >&2
+fi
+echo "   Voir ce que le script produit :  ./bin/make-vhost.sh --tls --print" >&2
+exit 1

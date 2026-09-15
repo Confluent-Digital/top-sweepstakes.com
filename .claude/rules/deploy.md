@@ -164,6 +164,17 @@ il pose un `return 404` sur le nom non couvert par son `if ($host = …)`, si bi
 que le renouvellement échoue sur ce nom-là, et le certificat entier avec lui.
 Le défaut est invisible pendant deux mois.
 
+Le `options-ssl-nginx.conf` de certbot définit déjà `ssl_session_cache`,
+`ssl_session_timeout` et `ssl_session_tickets`. Le script ne les ajoute donc que
+s'ils en sont absents — les réécrire par-dessus fait échouer nginx sur
+`« directive is duplicate »`.
+
+Si `nginx -t` refuse la configuration produite, le script **restaure le fichier
+précédent** et le dit. Laisser un fichier invalide en place ne ferait pas tomber
+le site — nginx continue sur sa configuration chargée — mais le prochain
+rechargement échouerait, par qui que ce soit et pour n'importe quelle raison,
+longtemps après et sans lien apparent.
+
 Optimisations incluses, et pourquoi :
 
 - `gzip_proxied any` — sans lui, **rien n'est compressé**, puisque tout passe par
