@@ -42,6 +42,28 @@ depot :
   `unknown shorthand flag: 'd' in -d` — le CLI Docker lit `-d` comme un drapeau
   de premier niveau — un message qui ne nomme ni Compose ni sa cause.
 
+### Le bug `KeyError: 'ContainerConfig'`
+
+docker-compose 1.29.2 plante en **recreant** un conteneur dont l'image vient
+d'etre reconstruite :
+
+```
+container.image_config['ContainerConfig'].get('Volumes') or {}
+KeyError: 'ContainerConfig'
+```
+
+Les images produites par un Docker recent ne portent plus la clef heritee
+`ContainerConfig`, que compose v1 suppose presente pour retrouver les volumes du
+conteneur existant. La creation initiale passe — il n'y a pas de conteneur a
+comparer — **seule la recreation echoue**. C'est pourquoi un `docker-compose
+down && docker-compose up --build -d` fonctionne la ou `up --build -d` seul
+echoue.
+
+`compose_up_build` (dans `bin/lib.sh`) detecte ce message et rejoue
+automatiquement avec un `down` prealable. `down` ne touche ni aux volumes
+nommes ni aux montages : les donnees MariaDB survivent. Il coupe en revanche le
+service le temps de la recreation.
+
 docker-compose v1 n'est plus maintenu depuis juillet 2023 et ne recoit plus de
 correctifs de securite. Installer `docker-compose-plugin` sur la production est
 la vraie reponse ; la clef `version` n'est qu'un pansement, a retirer ce jour-la.

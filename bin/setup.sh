@@ -22,7 +22,7 @@ fi
 
 require_matching_uid
 
-compose up -d --build
+compose_up_build
 echo "Attente de MariaDB..."
 until docker exec topsweepstakes_mariadb mariadb-admin ping --silent >/dev/null 2>&1; do sleep 2; done
 

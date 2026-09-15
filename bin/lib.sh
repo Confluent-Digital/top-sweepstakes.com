@@ -100,3 +100,44 @@ chown_commands() {
             ;;
     esac
 }
+
+# `compose up -d --build`, avec le contournement du bug de docker-compose v1.
+#
+# docker-compose 1.29.2 plante en RECREANT un conteneur dont l'image vient
+# d'etre reconstruite :
+#
+#   container.image_config['ContainerConfig'].get('Volumes') or {}
+#   KeyError: 'ContainerConfig'
+#
+# Les images produites par un Docker recent ne portent plus la clef heritee
+# `ContainerConfig`, que compose v1 suppose presente pour retrouver les volumes
+# du conteneur existant. La creation initiale passe — il n'y a pas de conteneur
+# a comparer — seule la recreation echoue. Le contournement est de supprimer les
+# conteneurs d'abord.
+#
+# `down` ne touche NI aux volumes nommes, NI aux montages : les donnees MariaDB
+# vivent dans un bind mount et survivent. Il coupe en revanche le service le
+# temps de la recreation, d'ou l'avertissement.
+compose_up_build() {
+    local sortie
+    if sortie=$(compose up -d --build 2>&1); then
+        printf '%s\n' "$sortie"
+        return 0
+    fi
+
+    printf '%s\n' "$sortie" >&2
+
+    if ! printf '%s' "$sortie" | grep -q "ContainerConfig"; then
+        return 1
+    fi
+
+    echo >&2
+    echo "!! docker-compose v1 ne sait pas recreer un conteneur dont l'image vient" >&2
+    echo "   d'etre reconstruite (bug connu : KeyError 'ContainerConfig')." >&2
+    echo "   Contournement : suppression des conteneurs puis recreation." >&2
+    echo "   Les donnees MariaDB ne sont PAS touchees (montage, pas volume nomme)." >&2
+    echo >&2
+
+    compose down
+    compose up -d --build
+}
